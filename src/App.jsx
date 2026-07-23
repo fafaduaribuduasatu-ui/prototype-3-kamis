@@ -349,7 +349,6 @@ export default function App() {
         SESI: e.sesi,
         "LAPORAN PEROLEHAN GMV TIKTOK": e.gmv,
         TARGET: e.target,
-        STATUS: e.gmv >= min && e.gmv <= max ? "Tercapai" : "Belum",
         GAJI: BASE_UPAH,
         BONUS: hitungBonus(e.gmv),
         "TOTAL GAJI": hitungTotalGaji(e.gmv),
