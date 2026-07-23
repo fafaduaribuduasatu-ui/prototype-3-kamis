@@ -327,8 +327,7 @@ export default function App() {
       map[e.host].gajiPokok += BASE_UPAH;
       map[e.host].bonus += hitungBonus(e.gmv);
       map[e.host].totalGaji += hitungTotalGaji(e.gmv);
-      const [min, max] = parseTargetRange(e.target);
-      if (e.gmv >= min && e.gmv <= max) map[e.host].tercapai += 1;
+      if (e.gmv >= 2_000_000) map[e.host].tercapai += 1;
     });
     return Object.values(map).sort((a, b) => b.total - a.total);
   }, [filtered, hosts]);
@@ -340,7 +339,6 @@ export default function App() {
 
   function exportExcel() {
     const detailRows = filtered.map((e) => {
-      const [min, max] = parseTargetRange(e.target);
       return {
         Timestamp: e.timestamp || "",
         "NAMA HOST": e.host,
@@ -349,6 +347,7 @@ export default function App() {
         SESI: e.sesi,
         "LAPORAN PEROLEHAN GMV TIKTOK": e.gmv,
         TARGET: e.target,
+        STATUS: e.gmv >= 2_000_000 ? "Tercapai" : "Belum",
         GAJI: BASE_UPAH,
         BONUS: hitungBonus(e.gmv),
         "TOTAL GAJI": hitungTotalGaji(e.gmv),
@@ -497,20 +496,22 @@ export default function App() {
               <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 18, fontWeight: 700 }}>{filtered.length}</div>
             </div>
           </div>
-          <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
-            <div style={cardStyle}>
-              <div style={{ fontSize: 12, color: "#8a8a9a" }}>GAJI</div>
-              <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 16, fontWeight: 700 }}>{formatRupiah(grandGajiPokok)}</div>
+          {isAdmin && (
+            <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
+              <div style={cardStyle}>
+                <div style={{ fontSize: 12, color: "#8a8a9a" }}>GAJI</div>
+                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 16, fontWeight: 700 }}>{formatRupiah(grandGajiPokok)}</div>
+              </div>
+              <div style={cardStyle}>
+                <div style={{ fontSize: 12, color: "#8a8a9a" }}>BONUS</div>
+                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 16, fontWeight: 700, color: ACCENT }}>{formatRupiah(grandBonus)}</div>
+              </div>
+              <div style={cardStyle}>
+                <div style={{ fontSize: 12, color: "#8a8a9a" }}>TOTAL GAJI</div>
+                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 16, fontWeight: 700, color: GOOD }}>{formatRupiah(grandTotalGaji)}</div>
+              </div>
             </div>
-            <div style={cardStyle}>
-              <div style={{ fontSize: 12, color: "#8a8a9a" }}>BONUS</div>
-              <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 16, fontWeight: 700, color: ACCENT }}>{formatRupiah(grandBonus)}</div>
-            </div>
-            <div style={cardStyle}>
-              <div style={{ fontSize: 12, color: "#8a8a9a" }}>TOTAL GAJI</div>
-              <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 16, fontWeight: 700, color: GOOD }}>{formatRupiah(grandTotalGaji)}</div>
-            </div>
-          </div>
+          )}
 
           <div style={{ height: 200, marginBottom: 20 }}>
             <ResponsiveContainer width="100%" height="100%">
@@ -530,13 +531,17 @@ export default function App() {
               <div>
                 <div style={{ fontWeight: 600 }}>{p.host}</div>
                 <div style={{ fontSize: 12, color: "#8a8a9a" }}>{p.sesi} sesi · {p.tercapai} tercapai target</div>
-                <div style={{ fontSize: 11, color: "#8a8a9a", marginTop: 2 }}>
-                  Gaji {formatRupiah(p.gajiPokok)} + Bonus {formatRupiah(p.bonus)}
-                </div>
+                {isAdmin && (
+                  <div style={{ fontSize: 11, color: "#8a8a9a", marginTop: 2 }}>
+                    Gaji {formatRupiah(p.gajiPokok)} + Bonus {formatRupiah(p.bonus)}
+                  </div>
+                )}
               </div>
               <div style={{ textAlign: "right" }}>
                 <div style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: ACCENT }}>{formatRupiah(p.total)}</div>
-                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: GOOD }}>Total: {formatRupiah(p.totalGaji)}</div>
+                {isAdmin && (
+                  <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: GOOD }}>Total: {formatRupiah(p.totalGaji)}</div>
+                )}
               </div>
             </div>
           ))}
@@ -544,8 +549,7 @@ export default function App() {
           <h3 style={{ fontFamily: "Fredoka, sans-serif", fontSize: 18, margin: "20px 0 10px" }}>Detail Laporan</h3>
           {filtered.length === 0 && <div style={{ opacity: 0.5, fontSize: 14 }}>Belum ada laporan bulan ini.</div>}
           {filtered.map((e) => {
-            const [min, max] = parseTargetRange(e.target);
-            const tercapai = e.gmv >= min && e.gmv <= max;
+            const tercapai = e.gmv >= 2_000_000;
             return (
               <div key={e.id} style={{ ...cardStyle, marginBottom: 8 }}>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
@@ -563,9 +567,11 @@ export default function App() {
                     {tercapai ? "🎉 Tercapai" : "Belum"}
                   </span>
                 </div>
-                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: "#8a8a9a", marginTop: 4 }}>
-                  Gaji {formatRupiah(BASE_UPAH)} + Bonus {formatRupiah(hitungBonus(e.gmv))} = <span style={{ color: GOOD }}>{formatRupiah(hitungTotalGaji(e.gmv))}</span>
-                </div>
+                {isAdmin && (
+                  <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: "#8a8a9a", marginTop: 4 }}>
+                    Gaji {formatRupiah(BASE_UPAH)} + Bonus {formatRupiah(hitungBonus(e.gmv))} = <span style={{ color: GOOD }}>{formatRupiah(hitungTotalGaji(e.gmv))}</span>
+                  </div>
+                )}
               </div>
             );
           })}
