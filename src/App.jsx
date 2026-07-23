@@ -628,16 +628,18 @@ export default function App() {
               {months.length === 0 && <option value="">Belum ada data</option>}
               {months.map((m) => <option key={m} value={m}>{m}</option>)}
             </select>
-            <button onClick={exportExcel} disabled={filtered.length === 0}
-              style={{
-                display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap",
-                padding: "0 16px", borderRadius: 10, border: "1px solid #2a2a36",
-                background: filtered.length === 0 ? "#1c1c26" : GOOD,
-                color: filtered.length === 0 ? "#77778a" : "#14141c",
-                fontWeight: 600, fontSize: 13, cursor: filtered.length === 0 ? "not-allowed" : "pointer",
-              }}>
-              <FileDown size={16} /> Excel
-            </button>
+            {isAdmin && (
+              <button onClick={exportExcel} disabled={filtered.length === 0}
+                style={{
+                  display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap",
+                  padding: "0 16px", borderRadius: 10, border: "1px solid #2a2a36",
+                  background: filtered.length === 0 ? "#1c1c26" : GOOD,
+                  color: filtered.length === 0 ? "#77778a" : "#14141c",
+                  fontWeight: 600, fontSize: 13, cursor: filtered.length === 0 ? "not-allowed" : "pointer",
+                }}>
+                <FileDown size={16} /> Excel
+              </button>
+            )}
           </div>
 
           <div style={{ display: "flex", gap: 10, margin: "16px 0" }}>
