@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from "react";
-import { Plus, Radio, TrendingUp, Settings2, X, Trash2, Lock, Unlock } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from "recharts";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { Plus, Radio, Settings2, X, Trash2, Lock, Unlock, ChevronDown, ChevronRight, Crown } from "lucide-react";
+import { BarChart, Bar, LineChart, Line, Legend, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from "recharts";
 import { FileDown } from "lucide-react";
 import * as XLSX from "xlsx";
 import { supabase } from "./supabaseClient";
@@ -18,6 +18,7 @@ const ACCENT = "#FE2C55";
 const CYAN = "#25F4EE";
 const GOOD = "#25F4EE";
 const BAD = "#FFB800";
+const HOST_COLORS = ["#25F4EE", "#FE2C55", "#FFB800", "#8B5CF6", "#4ADE80", "#FF7A5C", "#60A5FA"];
 const BASE_UPAH = 25000;
 const BONUS_PER_JT = 5000;
 
@@ -180,6 +181,72 @@ function formatTanggalDMY(iso) {
   return `${d}/${m}/${y}`;
 }
 
+function excelSerialToISO(serial) {
+  const utcDays = Math.floor(serial - 25569);
+  const date = new Date(utcDays * 86400 * 1000);
+  const y = date.getUTCFullYear();
+  const m = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(date.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+function parseTanggalFleksibel(val) {
+  if (typeof val === "number") return excelSerialToISO(val);
+  if (typeof val === "string") {
+    let m = val.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (m) return `${m[1]}-${m[2].padStart(2, "0")}-${m[3].padStart(2, "0")}`;
+    m = val.match(/(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})/);
+    if (m) return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+  }
+  return "";
+}
+function parseGmvFleksibel(val) {
+  if (typeof val === "number") return Math.round(val);
+  if (typeof val === "string") {
+    const cleaned = val.replace(/[^\d]/g, "");
+    return cleaned ? parseInt(cleaned, 10) : 0;
+  }
+  return 0;
+}
+function cariKolom(row, keywords) {
+  const keys = Object.keys(row);
+  for (const k of keys) {
+    const norm = k.toLowerCase().replace(/[^a-z0-9]/g, "");
+    if (keywords.some((kw) => norm.includes(kw))) return k;
+  }
+  return null;
+}
+function parseBarisExcel(rows) {
+  const hasil = [];
+  for (const row of rows) {
+    const hostKey = cariKolom(row, ["host", "nama"]);
+    const tglKey = cariKolom(row, ["tanggal", "tgl", "date"]);
+    const jamKey = cariKolom(row, ["jam"]);
+    const sesiKey = cariKolom(row, ["sesi"]);
+    const gmvKey = cariKolom(row, ["gmv", "perolehan"]);
+    const targetKey = cariKolom(row, ["target"]);
+    const tsKey = cariKolom(row, ["timestamp"]);
+    if (!hostKey || !tglKey || !gmvKey) continue;
+
+    const host = String(row[hostKey] || "").trim().toUpperCase();
+    const tanggal = parseTanggalFleksibel(row[tglKey]);
+    if (!host || !tanggal) continue;
+
+    let sesi = sesiKey ? String(row[sesiKey]).trim().toUpperCase() : "SESI 1";
+    if (sesi && !sesi.startsWith("SESI")) sesi = `SESI ${sesi}`;
+
+    hasil.push({
+      host,
+      tanggal,
+      jamMulai: jamKey ? String(row[jamKey]).trim() : "",
+      sesi,
+      gmv: parseGmvFleksibel(row[gmvKey]),
+      target: targetKey && row[targetKey] ? String(row[targetKey]) : "0 - 2JT",
+      timestamp: tsKey ? String(row[tsKey]) : nowTimestamp(),
+    });
+  }
+  return hasil;
+}
+
 async function loadShared(key, fallback) {
   try {
     const { data, error } = await supabase.from("kv_store").select("value").eq("key", key).maybeSingle();
@@ -211,6 +278,12 @@ export default function App() {
   const [pinError, setPinError] = useState(false);
   const [newPin, setNewPin] = useState("");
   const [importMsg, setImportMsg] = useState("");
+  const [excelMsg, setExcelMsg] = useState("");
+  const fileInputRef = useRef(null);
+  const [expandedHosts, setExpandedHosts] = useState({});
+  function toggleHostExpand(host) {
+    setExpandedHosts((prev) => ({ ...prev, [host]: !prev[host] }));
+  }
 
   const [form, setForm] = useState({
     host: "", tanggal: "", jamMulai: "", sesi: "", gmv: "", target: "",
@@ -305,6 +378,49 @@ export default function App() {
     setImportMsg(`${toAdd.length} laporan berhasil diimpor (${IMPORT_DATA_JULI_2026.length - toAdd.length} dilewati karena sudah ada).`);
   }
 
+  async function handleExcelFile(fileEvent) {
+    const file = fileEvent.target.files?.[0];
+    fileEvent.target.value = "";
+    if (!file) return;
+    setExcelMsg("Membaca file…");
+    try {
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: "array" });
+      let allRows = [];
+      wb.SheetNames.forEach((name) => {
+        const sheet = wb.Sheets[name];
+        const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+        allRows = allRows.concat(rows);
+      });
+      const parsed = parseBarisExcel(allRows);
+      if (parsed.length === 0) {
+        setExcelMsg("Tidak ada baris yang bisa dibaca. Pastikan ada kolom Nama Host, Tanggal, dan GMV.");
+        return;
+      }
+      const newHosts = [...hosts];
+      parsed.forEach((p) => { if (!newHosts.includes(p.host)) newHosts.push(p.host); });
+      if (newHosts.length !== hosts.length) {
+        setHosts(newHosts);
+        await saveShared("live-hosts", newHosts);
+      }
+      const existingKeys = new Set(entries.map((e) => `${e.host}|${e.tanggal}|${e.sesi}`));
+      const toAdd = parsed
+        .filter((p) => !existingKeys.has(`${p.host}|${p.tanggal}|${p.sesi}`))
+        .map((p, i) => ({ id: `xls-${Date.now()}-${i}`, ...p }));
+      if (toAdd.length === 0) {
+        setExcelMsg("Semua baris di file ini sudah pernah ada, tidak ada yang ditambahkan.");
+        return;
+      }
+      const next = [...entries, ...toAdd];
+      setEntries(next);
+      await saveShared("live-entries", next);
+      setExcelMsg(`${toAdd.length} laporan berhasil diimpor dari Excel (${parsed.length - toAdd.length} dilewati karena duplikat).`);
+    } catch (err) {
+      console.error(err);
+      setExcelMsg("Gagal membaca file. Pastikan formatnya .xlsx atau .xls.");
+    }
+  }
+
   const months = useMemo(() => {
     const set = new Set(entries.map((e) => e.tanggal?.slice(0, 7)).filter(Boolean));
     return Array.from(set).sort().reverse();
@@ -319,17 +435,55 @@ export default function App() {
 
   const perHost = useMemo(() => {
     const map = {};
-    hosts.forEach((h) => (map[h] = { host: h, total: 0, sesi: 0, tercapai: 0, gajiPokok: 0, bonus: 0, totalGaji: 0 }));
+    hosts.forEach((h) => (map[h] = { host: h, total: 0, sesi: 0, tercapai: 0, gajiPokok: 0, bonus: 0, totalGaji: 0, hariSet: new Set() }));
     filtered.forEach((e) => {
-      if (!map[e.host]) map[e.host] = { host: e.host, total: 0, sesi: 0, tercapai: 0, gajiPokok: 0, bonus: 0, totalGaji: 0 };
+      if (!map[e.host]) map[e.host] = { host: e.host, total: 0, sesi: 0, tercapai: 0, gajiPokok: 0, bonus: 0, totalGaji: 0, hariSet: new Set() };
       map[e.host].total += e.gmv;
       map[e.host].sesi += 1;
       map[e.host].gajiPokok += BASE_UPAH;
       map[e.host].bonus += hitungBonus(e.gmv);
       map[e.host].totalGaji += hitungTotalGaji(e.gmv);
       if (e.gmv >= 2_000_000) map[e.host].tercapai += 1;
+      if (e.tanggal) map[e.host].hariSet.add(e.tanggal);
     });
-    return Object.values(map).sort((a, b) => b.total - a.total);
+    return Object.values(map)
+      .map((p) => ({ ...p, hariKerja: p.hariSet.size }))
+      .sort((a, b) => b.total - a.total);
+  }, [filtered, hosts]);
+
+  const topPerformer = perHost.length > 0 && perHost[0].total > 0 ? perHost[0].host : null;
+
+  const dailyChartData = useMemo(() => {
+    if (!monthFilter) return [];
+    const [y, m] = monthFilter.split("-").map(Number);
+    if (!y || !m) return [];
+    const daysInMonth = new Date(y, m, 0).getDate();
+    const arr = [];
+    for (let d = 1; d <= daysInMonth; d++) {
+      const row = { day: d };
+      hosts.forEach((h) => { row[h] = 0; });
+      arr.push(row);
+    }
+    filtered.forEach((e) => {
+      const day = parseInt((e.tanggal || "").slice(8, 10), 10);
+      if (day >= 1 && day <= daysInMonth) {
+        arr[day - 1][e.host] = (arr[day - 1][e.host] || 0) + e.gmv;
+      }
+    });
+    return arr;
+  }, [filtered, monthFilter, hosts]);
+
+  const detailByHost = useMemo(() => {
+    const map = {};
+    hosts.forEach((h) => (map[h] = []));
+    filtered.forEach((e) => {
+      if (!map[e.host]) map[e.host] = [];
+      map[e.host].push(e);
+    });
+    Object.keys(map).forEach((h) => {
+      map[h].sort((a, b) => (b.tanggal + b.jamMulai).localeCompare(a.tanggal + a.jamMulai));
+    });
+    return map;
   }, [filtered, hosts]);
 
   const grandTotal = filtered.reduce((s, e) => s + e.gmv, 0);
@@ -525,12 +679,31 @@ export default function App() {
             </ResponsiveContainer>
           </div>
 
+          <h3 style={{ fontFamily: "Fredoka, sans-serif", fontSize: 16, marginBottom: 10, color: "#8a8a9a" }}>Tren GMV Harian</h3>
+          <div style={{ height: 220, marginBottom: 20 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={dailyChartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#2a2a36" />
+                <XAxis dataKey="day" tick={{ fill: "#8a8a9a", fontSize: 10 }} />
+                <YAxis tick={{ fill: "#8a8a9a", fontSize: 10 }} tickFormatter={(v) => `${v / 1e6}jt`} />
+                <Tooltip formatter={(v) => formatRupiah(v)} labelFormatter={(d) => `Tanggal ${d}`} contentStyle={{ background: "#20202b", border: "none", borderRadius: 8 }} />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+                {hosts.map((h, i) => (
+                  <Line key={h} type="monotone" dataKey={h} stroke={HOST_COLORS[i % HOST_COLORS.length]} strokeWidth={2} dot={false} />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
           <h3 style={{ fontFamily: "Fredoka, sans-serif", fontSize: 18, marginBottom: 10 }}>Rekap per Host</h3>
           {perHost.map((p) => (
             <div key={p.host} style={{ ...cardStyle, display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
               <div>
-                <div style={{ fontWeight: 600 }}>{p.host}</div>
-                <div style={{ fontSize: 12, color: "#8a8a9a" }}>{p.sesi} sesi · {p.tercapai} tercapai target</div>
+                <div style={{ fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
+                  {p.host}
+                  {topPerformer === p.host && <Crown size={14} color={BAD} />}
+                </div>
+                <div style={{ fontSize: 12, color: "#8a8a9a" }}>{p.hariKerja} hari kerja · {p.sesi} sesi · {p.tercapai} tercapai target</div>
                 {isAdmin && (
                   <div style={{ fontSize: 11, color: "#8a8a9a", marginTop: 2 }}>
                     Gaji {formatRupiah(p.gajiPokok)} + Bonus {formatRupiah(p.bonus)}
@@ -548,28 +721,47 @@ export default function App() {
 
           <h3 style={{ fontFamily: "Fredoka, sans-serif", fontSize: 18, margin: "20px 0 10px" }}>Detail Laporan</h3>
           {filtered.length === 0 && <div style={{ opacity: 0.5, fontSize: 14 }}>Belum ada laporan bulan ini.</div>}
-          {filtered.map((e) => {
-            const tercapai = e.gmv >= 2_000_000;
+          {hosts.filter((h) => (detailByHost[h] || []).length > 0).map((host) => {
+            const hostEntries = detailByHost[host] || [];
+            const isOpen = !!expandedHosts[host];
             return (
-              <div key={e.id} style={{ ...cardStyle, marginBottom: 8 }}>
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <div style={{ fontWeight: 600 }}>{e.host} · {e.tanggal}</div>
-                  {isAdmin && (
-                    <button onClick={() => deleteEntry(e.id)} style={{ background: "none", border: "none", color: "#8a8a9a", cursor: "pointer" }}>
-                      <Trash2 size={14} />
-                    </button>
-                  )}
-                </div>
-                <div style={{ fontSize: 12, color: "#8a8a9a", marginTop: 2 }}>{e.jamMulai} · {e.sesi} · target {e.target}</div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
-                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>{formatRupiah(e.gmv)}</span>
-                  <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: tercapai ? "rgba(37,244,238,0.15)" : "rgba(255,184,0,0.15)", color: tercapai ? GOOD : BAD, fontWeight: 600 }}>
-                    {tercapai ? "🎉 Tercapai" : "Belum"}
+              <div key={host} style={{ ...cardStyle, marginBottom: 8, padding: 0, overflow: "hidden" }}>
+                <button onClick={() => toggleHostExpand(host)}
+                  style={{ width: "100%", background: "none", border: "none", color: "#F5F1E8", cursor: "pointer", padding: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
+                    {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                    {host}
                   </span>
-                </div>
-                {isAdmin && (
-                  <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: "#8a8a9a", marginTop: 4 }}>
-                    Gaji {formatRupiah(BASE_UPAH)} + Bonus {formatRupiah(hitungBonus(e.gmv))} = <span style={{ color: GOOD }}>{formatRupiah(hitungTotalGaji(e.gmv))}</span>
+                  <span style={{ fontSize: 12, color: "#8a8a9a" }}>{hostEntries.length} laporan</span>
+                </button>
+                {isOpen && (
+                  <div style={{ padding: "0 14px 14px" }}>
+                    {hostEntries.map((e) => {
+                      const tercapai = e.gmv >= 2_000_000;
+                      return (
+                        <div key={e.id} style={{ borderTop: "1px solid #24242f", paddingTop: 10, marginTop: 10 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}>
+                            <div style={{ fontSize: 13, color: "#8a8a9a" }}>{formatTanggalDMY(e.tanggal)} · {e.jamMulai} · {e.sesi}</div>
+                            {isAdmin && (
+                              <button onClick={() => deleteEntry(e.id)} style={{ background: "none", border: "none", color: "#8a8a9a", cursor: "pointer" }}>
+                                <Trash2 size={14} />
+                              </button>
+                            )}
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
+                            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>{formatRupiah(e.gmv)}</span>
+                            <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: tercapai ? "rgba(37,244,238,0.15)" : "rgba(255,184,0,0.15)", color: tercapai ? GOOD : BAD, fontWeight: 600 }}>
+                              {tercapai ? "🎉 Tercapai" : "Belum"}
+                            </span>
+                          </div>
+                          {isAdmin && (
+                            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: "#8a8a9a", marginTop: 4 }}>
+                              Gaji {formatRupiah(BASE_UPAH)} + Bonus {formatRupiah(hitungBonus(e.gmv))} = <span style={{ color: GOOD }}>{formatRupiah(hitungTotalGaji(e.gmv))}</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -621,6 +813,19 @@ export default function App() {
                 Import Data Juli 2026 ({IMPORT_DATA_JULI_2026.length} baris)
               </button>
               {importMsg && <div style={{ marginTop: 8, fontSize: 12, color: "#8a8a9a" }}>{importMsg}</div>}
+            </div>
+
+            <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid #24242f" }}>
+              <label style={labelStyle}>IMPORT DARI FILE EXCEL KAMU</label>
+              <input ref={fileInputRef} type="file" accept=".xlsx,.xls" onChange={handleExcelFile} style={{ display: "none" }} />
+              <button onClick={() => fileInputRef.current?.click()}
+                style={{ width: "100%", padding: "12px 0", borderRadius: 10, border: "1px solid #24242f", background: "#16161f", color: "#F5F1E8", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                <FileDown size={16} style={{ transform: "rotate(180deg)" }} /> Pilih File Excel (.xlsx)
+              </button>
+              <div style={{ fontSize: 11, color: "#8a8a9a", marginTop: 6 }}>
+                Kolom yang dikenali otomatis: Nama Host, Tanggal, Jam Mulai, Sesi, GMV, Target — nama kolom fleksibel, tidak harus persis sama.
+              </div>
+              {excelMsg && <div style={{ marginTop: 8, fontSize: 12, color: "#8a8a9a" }}>{excelMsg}</div>}
             </div>
           </div>
         </div>
