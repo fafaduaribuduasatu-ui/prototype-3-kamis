@@ -30,136 +30,6 @@ function hitungTotalGaji(gmv) {
   return BASE_UPAH + hitungBonus(gmv);
 }
 
-// Data historis dari Google Form (Juli 2026), diimpor lewat tombol admin
-const IMPORT_DATA_JULI_2026 = [
-  { host: 'APRIL', tanggal: '2026-07-01', jamMulai: '09.00', sesi: 'SESI 1', gmv: 207000, target: '0 - 2JT', timestamp: '02/07/2026 20:06:57' },
-  { host: 'APRIL', tanggal: '2026-07-01', jamMulai: '17.00', sesi: 'SESI 2', gmv: 385000, target: '0 - 2JT', timestamp: '02/07/2026 20:07:44' },
-  { host: 'APRIL', tanggal: '2026-07-02', jamMulai: '13.00', sesi: 'SESI 1', gmv: 517000, target: '0 - 2JT', timestamp: '02/07/2026 20:09:18' },
-  { host: 'APRIL', tanggal: '2026-07-02', jamMulai: '17.00', sesi: 'SESI 2', gmv: 271000, target: '0 - 2JT', timestamp: '02/07/2026 20:10:05' },
-  { host: 'APRIL', tanggal: '2026-07-03', jamMulai: '09.00', sesi: 'SESI 1', gmv: 174000, target: '0 - 2JT', timestamp: '03/07/2026 21:23:03' },
-  { host: 'APRIL', tanggal: '2026-07-03', jamMulai: '17.00', sesi: 'SESI 2', gmv: 156000, target: '0 - 2JT', timestamp: '03/07/2026 21:23:31' },
-  { host: 'APRIL', tanggal: '2026-07-04', jamMulai: '13.00', sesi: 'SESI 1', gmv: 313000, target: '0 - 2JT', timestamp: '04/07/2026 21:14:36' },
-  { host: 'APRIL', tanggal: '2026-07-04', jamMulai: '17.00', sesi: 'SESI 2', gmv: 865000, target: '0 - 2JT', timestamp: '04/07/2026 21:15:09' },
-  { host: 'APRIL', tanggal: '2026-07-05', jamMulai: '11.00', sesi: 'SESI 1', gmv: 159000, target: '0 - 2JT', timestamp: '06/07/2026 7:16:16' },
-  { host: 'APRIL', tanggal: '2026-07-05', jamMulai: '17.00', sesi: 'SESI 2', gmv: 585000, target: '0 - 2JT', timestamp: '06/07/2026 7:16:50' },
-  { host: 'APRIL', tanggal: '2026-07-06', jamMulai: '11.00', sesi: 'SESI 1', gmv: 432000, target: '0 - 2JT', timestamp: '06/07/2026 21:24:35' },
-  { host: 'APRIL', tanggal: '2026-07-06', jamMulai: '17.00', sesi: 'SESI 2', gmv: 735000, target: '0 - 2JT', timestamp: '06/07/2026 21:25:21' },
-  { host: 'APRIL', tanggal: '2026-07-07', jamMulai: '05.00', sesi: 'SESI 1', gmv: 416000, target: '0 - 2JT', timestamp: '07/07/2026 19:31:02' },
-  { host: 'APRIL', tanggal: '2026-07-07', jamMulai: '09.00', sesi: 'SESI 2', gmv: 528000, target: '0 - 2JT', timestamp: '07/07/2026 19:31:32' },
-  { host: 'APRIL', tanggal: '2026-07-08', jamMulai: '09.00', sesi: 'SESI 1', gmv: 185000, target: '0 - 2JT', timestamp: '12/07/2026 7:14:09' },
-  { host: 'APRIL', tanggal: '2026-07-08', jamMulai: '17.00', sesi: 'SESI 2', gmv: 453000, target: '0 - 2JT', timestamp: '12/07/2026 7:14:57' },
-  { host: 'APRIL', tanggal: '2026-07-09', jamMulai: '09.00', sesi: 'SESI 1', gmv: 785000, target: '0 - 2JT', timestamp: '12/07/2026 7:15:40' },
-  { host: 'APRIL', tanggal: '2026-07-09', jamMulai: '17.00', sesi: 'SESI 2', gmv: 257000, target: '0 - 2JT', timestamp: '12/07/2026 7:16:25' },
-  { host: 'APRIL', tanggal: '2026-07-10', jamMulai: '11.00', sesi: 'SESI 1', gmv: 641000, target: '0 - 2JT', timestamp: '12/07/2026 7:17:13' },
-  { host: 'APRIL', tanggal: '2026-07-10', jamMulai: '17.00', sesi: 'SESI 2', gmv: 309000, target: '0 - 2JT', timestamp: '12/07/2026 7:17:52' },
-  { host: 'APRIL', tanggal: '2026-07-11', jamMulai: '05.00', sesi: 'SESI 1', gmv: 482000, target: '0 - 2JT', timestamp: '12/07/2026 7:18:29' },
-  { host: 'APRIL', tanggal: '2026-07-11', jamMulai: '11.00', sesi: 'SESI 2', gmv: 103000, target: '0 - 2JT', timestamp: '12/07/2026 7:19:09' },
-  { host: 'APRIL', tanggal: '2026-07-12', jamMulai: '05.00', sesi: 'SESI 1', gmv: 346000, target: '0 - 2JT', timestamp: '12/07/2026 21:56:59' },
-  { host: 'APRIL', tanggal: '2026-07-12', jamMulai: '09.00', sesi: 'SESI 2', gmv: 1200000, target: '0 - 2JT', timestamp: '12/07/2026 21:57:25' },
-  { host: 'APRIL', tanggal: '2026-07-13', jamMulai: '15.00', sesi: 'SESI 1', gmv: 143000, target: '0 - 2JT', timestamp: '16/07/2026 20:50:18' },
-  { host: 'APRIL', tanggal: '2026-07-13', jamMulai: '19.00', sesi: 'SESI 2', gmv: 360000, target: '0 - 2JT', timestamp: '16/07/2026 20:50:50' },
-  { host: 'APRIL', tanggal: '2026-07-14', jamMulai: '05.00', sesi: 'SESI 1', gmv: 478000, target: '0 - 2JT', timestamp: '16/07/2026 20:51:24' },
-  { host: 'APRIL', tanggal: '2026-07-14', jamMulai: '11.00', sesi: 'SESI 2', gmv: 100000, target: '0 - 2JT', timestamp: '16/07/2026 20:52:25' },
-  { host: 'APRIL', tanggal: '2026-07-15', jamMulai: '05.00', sesi: 'SESI 1', gmv: 299000, target: '0 - 2JT', timestamp: '16/07/2026 20:53:02' },
-  { host: 'APRIL', tanggal: '2026-07-15', jamMulai: '11.00', sesi: 'SESI 2', gmv: 421000, target: '0 - 2JT', timestamp: '16/07/2026 20:53:28' },
-  { host: 'APRIL', tanggal: '2026-07-16', jamMulai: '05.00', sesi: 'SESI 1', gmv: 200000, target: '0 - 2JT', timestamp: '16/07/2026 20:53:50' },
-  { host: 'APRIL', tanggal: '2026-07-16', jamMulai: '11.00', sesi: 'SESI 2', gmv: 241000, target: '0 - 2JT', timestamp: '16/07/2026 20:54:14' },
-  { host: 'ALIN', tanggal: '2026-07-01', jamMulai: '07.00', sesi: 'SESI 1', gmv: 265000, target: '0 - 2JT', timestamp: '20/07/2026 9:22:42' },
-  { host: 'ALIN', tanggal: '2026-07-01', jamMulai: '13.00', sesi: 'SESI 2', gmv: 408000, target: '0 - 2JT', timestamp: '20/07/2026 9:23:22' },
-  { host: 'ALIN', tanggal: '2026-07-02', jamMulai: '07.00', sesi: 'SESI 1', gmv: 301000, target: '0 - 2JT', timestamp: '20/07/2026 9:23:50' },
-  { host: 'ALIN', tanggal: '2026-07-02', jamMulai: '13.00', sesi: 'SESI 2', gmv: 630000, target: '0 - 2JT', timestamp: '20/07/2026 9:24:13' },
-  { host: 'ALIN', tanggal: '2026-07-03', jamMulai: '07.00', sesi: 'SESI 1', gmv: 278000, target: '0 - 2JT', timestamp: '20/07/2026 9:24:44' },
-  { host: 'ALIN', tanggal: '2026-07-03', jamMulai: '13.00', sesi: 'SESI 2', gmv: 301000, target: '0 - 2JT', timestamp: '20/07/2026 9:25:39' },
-  { host: 'ALIN', tanggal: '2026-07-04', jamMulai: '05.00', sesi: 'SESI 1', gmv: 219000, target: '0 - 2JT', timestamp: '20/07/2026 9:26:38' },
-  { host: 'ALIN', tanggal: '2026-07-04', jamMulai: '09.00', sesi: 'SESI 2', gmv: 399000, target: '0 - 2JT', timestamp: '20/07/2026 9:27:03' },
-  { host: 'ALIN', tanggal: '2026-07-05', jamMulai: '07.00', sesi: 'SESI 1', gmv: 527000, target: '0 - 2JT', timestamp: '20/07/2026 9:27:44' },
-  { host: 'ALIN', tanggal: '2026-07-05', jamMulai: '13.00', sesi: 'SESI 2', gmv: 443000, target: '0 - 2JT', timestamp: '20/07/2026 9:28:11' },
-  { host: 'ALIN', tanggal: '2026-07-06', jamMulai: '07.00', sesi: 'SESI 1', gmv: 179000, target: '0 - 2JT', timestamp: '20/07/2026 9:28:41' },
-  { host: 'ALIN', tanggal: '2026-07-06', jamMulai: '13.00', sesi: 'SESI 2', gmv: 501000, target: '0 - 2JT', timestamp: '20/07/2026 9:29:18' },
-  { host: 'ALIN', tanggal: '2026-07-07', jamMulai: '07.00', sesi: 'SESI 1', gmv: 695000, target: '0 - 2JT', timestamp: '20/07/2026 9:29:56' },
-  { host: 'ALIN', tanggal: '2026-07-07', jamMulai: '13.00', sesi: 'SESI 2', gmv: 410000, target: '0 - 2JT', timestamp: '20/07/2026 9:30:25' },
-  { host: 'ALIN', tanggal: '2026-07-08', jamMulai: '07.00', sesi: 'SESI 1', gmv: 878000, target: '0 - 2JT', timestamp: '20/07/2026 9:30:59' },
-  { host: 'ALIN', tanggal: '2026-07-08', jamMulai: '13.00', sesi: 'SESI 2', gmv: 536000, target: '0 - 2JT', timestamp: '20/07/2026 9:31:26' },
-  { host: 'ALIN', tanggal: '2026-07-09', jamMulai: '07.00', sesi: 'SESI 1', gmv: 794000, target: '0 - 2JT', timestamp: '20/07/2026 9:32:09' },
-  { host: 'ALIN', tanggal: '2026-07-09', jamMulai: '13.00', sesi: 'SESI 2', gmv: 749000, target: '0 - 2JT', timestamp: '20/07/2026 9:32:36' },
-  { host: 'ALIN', tanggal: '2026-07-10', jamMulai: '07.00', sesi: 'SESI 1', gmv: 262000, target: '0 - 2JT', timestamp: '20/07/2026 9:33:10' },
-  { host: 'ALIN', tanggal: '2026-07-10', jamMulai: '13.00', sesi: 'SESI 2', gmv: 755000, target: '0 - 2JT', timestamp: '20/07/2026 9:33:39' },
-  { host: 'ALIN', tanggal: '2026-07-11', jamMulai: '07.00', sesi: 'SESI 1', gmv: 640000, target: '0 - 2JT', timestamp: '20/07/2026 9:34:19' },
-  { host: 'ALIN', tanggal: '2026-07-11', jamMulai: '13.00', sesi: 'SESI 2', gmv: 751000, target: '0 - 2JT', timestamp: '20/07/2026 9:34:49' },
-  { host: 'ALIN', tanggal: '2026-07-12', jamMulai: '07.00', sesi: 'SESI 1', gmv: 600000, target: '0 - 2JT', timestamp: '20/07/2026 9:35:22' },
-  { host: 'ALIN', tanggal: '2026-07-12', jamMulai: '13.00', sesi: 'SESI 2', gmv: 1100000, target: '0 - 2JT', timestamp: '20/07/2026 9:35:55' },
-  { host: 'ALIN', tanggal: '2026-07-13', jamMulai: '07.00', sesi: 'SESI 1', gmv: 0, target: '0 - 2JT', timestamp: '20/07/2026 9:36:19' },
-  { host: 'ALIN', tanggal: '2026-07-13', jamMulai: '13.00', sesi: 'SESI 2', gmv: 460000, target: '0 - 2JT', timestamp: '20/07/2026 9:36:39' },
-  { host: 'ALIN', tanggal: '2026-07-14', jamMulai: '07.00', sesi: 'SESI 1', gmv: 208000, target: '0 - 2JT', timestamp: '20/07/2026 9:37:04' },
-  { host: 'ALIN', tanggal: '2026-07-14', jamMulai: '13.00', sesi: 'SESI 2', gmv: 559000, target: '0 - 2JT', timestamp: '20/07/2026 9:37:29' },
-  { host: 'ALIN', tanggal: '2026-07-15', jamMulai: '07.00', sesi: 'SESI 1', gmv: 103000, target: '0 - 2JT', timestamp: '20/07/2026 9:38:08' },
-  { host: 'ALIN', tanggal: '2026-07-15', jamMulai: '13.00', sesi: 'SESI 2', gmv: 301000, target: '0 - 2JT', timestamp: '20/07/2026 9:38:36' },
-  { host: 'ALIN', tanggal: '2026-07-16', jamMulai: '09.00', sesi: 'SESI 1', gmv: 719000, target: '0 - 2JT', timestamp: '20/07/2026 9:39:23' },
-  { host: 'ALIN', tanggal: '2026-07-16', jamMulai: '13.00', sesi: 'SESI 2', gmv: 308000, target: '0 - 2JT', timestamp: '20/07/2026 9:39:51' },
-  { host: 'ALIN', tanggal: '2026-07-17', jamMulai: '09.00', sesi: 'SESI 1', gmv: 591000, target: '0 - 2JT', timestamp: '20/07/2026 9:40:35' },
-  { host: 'ALIN', tanggal: '2026-07-17', jamMulai: '13.00', sesi: 'SESI 2', gmv: 243000, target: '0 - 2JT', timestamp: '20/07/2026 9:41:00' },
-  { host: 'ALIN', tanggal: '2026-07-18', jamMulai: '07.00', sesi: 'SESI 1', gmv: 364000, target: '0 - 2JT', timestamp: '20/07/2026 9:41:52' },
-  { host: 'ALIN', tanggal: '2026-07-19', jamMulai: '07.00', sesi: 'SESI 1', gmv: 295000, target: '0 - 2JT', timestamp: '20/07/2026 9:42:25' },
-  { host: 'ALIN', tanggal: '2026-07-19', jamMulai: '13.00', sesi: 'SESI 2', gmv: 656000, target: '0 - 2JT', timestamp: '20/07/2026 9:42:46' },
-  { host: 'AUFA', tanggal: '2026-07-01', jamMulai: '11.00', sesi: 'SESI 1', gmv: 632000, target: '0 - 2JT', timestamp: '20/07/2026 11:06:09' },
-  { host: 'AUFA', tanggal: '2026-07-02', jamMulai: '15.00', sesi: 'SESI 1', gmv: 397000, target: '0 - 2JT', timestamp: '20/07/2026 11:06:56' },
-  { host: 'AUFA', tanggal: '2026-07-02', jamMulai: '19.00', sesi: 'SESI 2', gmv: 511000, target: '0 - 2JT', timestamp: '20/07/2026 11:07:28' },
-  { host: 'AUFA', tanggal: '2026-07-03', jamMulai: '15.00', sesi: 'SESI 1', gmv: 607000, target: '0 - 2JT', timestamp: '20/07/2026 11:08:06' },
-  { host: 'AUFA', tanggal: '2026-07-03', jamMulai: '19.00', sesi: 'SESI 2', gmv: 258000, target: '0 - 2JT', timestamp: '20/07/2026 11:08:59' },
-  { host: 'AUFA', tanggal: '2026-07-04', jamMulai: '15.00', sesi: 'SESI 1', gmv: 517000, target: '0 - 2JT', timestamp: '20/07/2026 11:09:33' },
-  { host: 'AUFA', tanggal: '2026-07-04', jamMulai: '19.00', sesi: 'SESI 2', gmv: 774000, target: '0 - 2JT', timestamp: '20/07/2026 11:10:04' },
-  { host: 'AUFA', tanggal: '2026-07-05', jamMulai: '09.00', sesi: 'SESI 1', gmv: 622000, target: '0 - 2JT', timestamp: '20/07/2026 11:10:46' },
-  { host: 'AUFA', tanggal: '2026-07-06', jamMulai: '15.00', sesi: 'SESI 1', gmv: 629000, target: '0 - 2JT', timestamp: '20/07/2026 11:11:24' },
-  { host: 'AUFA', tanggal: '2026-07-06', jamMulai: '09.00', sesi: 'SESI 2', gmv: 593000, target: '0 - 2JT', timestamp: '20/07/2026 11:12:21' },
-  { host: 'AUFA', tanggal: '2026-07-07', jamMulai: '15.00', sesi: 'SESI 1', gmv: 614000, target: '0 - 2JT', timestamp: '20/07/2026 11:12:54' },
-  { host: 'AUFA', tanggal: '2026-07-07', jamMulai: '19.00', sesi: 'SESI 2', gmv: 440000, target: '0 - 2JT', timestamp: '20/07/2026 11:13:21' },
-  { host: 'AUFA', tanggal: '2026-07-08', jamMulai: '15.00', sesi: 'SESI 1', gmv: 766000, target: '0 - 2JT', timestamp: '20/07/2026 11:13:56' },
-  { host: 'AUFA', tanggal: '2026-07-08', jamMulai: '19.00', sesi: 'SESI 2', gmv: 715000, target: '0 - 2JT', timestamp: '20/07/2026 11:14:22' },
-  { host: 'AUFA', tanggal: '2026-07-09', jamMulai: '05.00', sesi: 'SESI 1', gmv: 366000, target: '0 - 2JT', timestamp: '20/07/2026 11:14:56' },
-  { host: 'AUFA', tanggal: '2026-07-09', jamMulai: '11.00', sesi: 'SESI 2', gmv: 797000, target: '0 - 2JT', timestamp: '20/07/2026 11:15:31' },
-  { host: 'AUFA', tanggal: '2026-07-10', jamMulai: '05.00', sesi: 'SESI 1', gmv: 502000, target: '0 - 2JT', timestamp: '20/07/2026 11:16:05' },
-  { host: 'AUFA', tanggal: '2026-07-10', jamMulai: '09.00', sesi: 'SESI 2', gmv: 1100000, target: '0 - 2JT', timestamp: '20/07/2026 11:16:46' },
-  { host: 'AUFA', tanggal: '2026-07-11', jamMulai: '09.00', sesi: 'SESI 1', gmv: 491000, target: '0 - 2JT', timestamp: '20/07/2026 11:17:16' },
-  { host: 'AUFA', tanggal: '2026-07-11', jamMulai: '17.00', sesi: 'SESI 2', gmv: 882000, target: '0 - 2JT', timestamp: '20/07/2026 11:17:58' },
-  { host: 'AUFA', tanggal: '2026-07-12', jamMulai: '11.00', sesi: 'SESI 1', gmv: 473000, target: '0 - 2JT', timestamp: '20/07/2026 11:18:37' },
-  { host: 'AUFA', tanggal: '2026-07-12', jamMulai: '17.00', sesi: 'SESI 2', gmv: 1000000, target: '0 - 2JT', timestamp: '20/07/2026 11:19:03' },
-  { host: 'AUFA', tanggal: '2026-07-13', jamMulai: '09.00', sesi: 'SESI 1', gmv: 133000, target: '0 - 2JT', timestamp: '20/07/2026 11:19:31' },
-  { host: 'AUFA', tanggal: '2026-07-13', jamMulai: '17.00', sesi: 'SESI 2', gmv: 470000, target: '0 - 2JT', timestamp: '20/07/2026 11:20:02' },
-  { host: 'AUFA', tanggal: '2026-07-14', jamMulai: '11.00', sesi: 'SESI 1', gmv: 365000, target: '0 - 2JT', timestamp: '20/07/2026 11:20:40' },
-  { host: 'AUFA', tanggal: '2026-07-14', jamMulai: '17.00', sesi: 'SESI 2', gmv: 920000, target: '0 - 2JT', timestamp: '20/07/2026 11:21:08' },
-  { host: 'AUFA', tanggal: '2026-07-15', jamMulai: '09.00', sesi: 'SESI 1', gmv: 729000, target: '0 - 2JT', timestamp: '20/07/2026 11:21:36' },
-  { host: 'AUFA', tanggal: '2026-07-15', jamMulai: '17.00', sesi: 'SESI 2', gmv: 744000, target: '0 - 2JT', timestamp: '20/07/2026 11:22:08' },
-  { host: 'AUFA', tanggal: '2026-07-16', jamMulai: '07.00', sesi: 'SESI 1', gmv: 364000, target: '0 - 2JT', timestamp: '20/07/2026 11:22:41' },
-  { host: 'AUFA', tanggal: '2026-07-16', jamMulai: '17.00', sesi: 'SESI 2', gmv: 155000, target: '0 - 2JT', timestamp: '20/07/2026 11:23:11' },
-  { host: 'AUFA', tanggal: '2026-07-17', jamMulai: '07.00', sesi: 'SESI 1', gmv: 409000, target: '0 - 2JT', timestamp: '20/07/2026 11:23:47' },
-  { host: 'AUFA', tanggal: '2026-07-17', jamMulai: '17.00', sesi: 'SESI 2', gmv: 524000, target: '0 - 2JT', timestamp: '20/07/2026 11:24:15' },
-  { host: 'AUFA', tanggal: '2026-07-18', jamMulai: '09.00', sesi: 'SESI 1', gmv: 404000, target: '0 - 2JT', timestamp: '20/07/2026 11:24:55' },
-  { host: 'AUFA', tanggal: '2026-07-18', jamMulai: '17.00', sesi: 'SESI 2', gmv: 408000, target: '0 - 2JT', timestamp: '20/07/2026 11:25:25' },
-  { host: 'AUFA', tanggal: '2026-07-19', jamMulai: '09.00', sesi: 'SESI 1', gmv: 484000, target: '0 - 2JT', timestamp: '20/07/2026 11:26:01' },
-  { host: 'AUFA', tanggal: '2026-07-19', jamMulai: '17.00', sesi: 'SESI 2', gmv: 547000, target: '0 - 2JT', timestamp: '20/07/2026 11:26:43' },
-  { host: 'AUFA', tanggal: '2026-07-20', jamMulai: '09.00', sesi: 'SESI 1', gmv: 256000, target: '0 - 2JT', timestamp: '20/07/2026 11:27:09' },
-  { host: 'ALIN', tanggal: '2026-07-20', jamMulai: '07.00', sesi: 'SESI 1', gmv: 274000, target: '0 - 2JT', timestamp: '20/07/2026 15:05:22' },
-  { host: 'ALIN', tanggal: '2026-07-20', jamMulai: '13.00', sesi: 'SESI 2', gmv: 553000, target: '0 - 2JT', timestamp: '20/07/2026 15:06:02' },
-  { host: 'APRIL', tanggal: '2026-07-17', jamMulai: '05.00', sesi: 'SESI 1', gmv: 201000, target: '0 - 2JT', timestamp: '21/07/2026 21:47:27' },
-  { host: 'APRIL', tanggal: '2026-07-17', jamMulai: '11.00', sesi: 'SESI 2', gmv: 659000, target: '0 - 2JT', timestamp: '21/07/2026 21:48:41' },
-  { host: 'APRIL', tanggal: '2026-07-18', jamMulai: '11.00', sesi: 'SESI 1', gmv: 178000, target: '0 - 2JT', timestamp: '21/07/2026 21:49:30' },
-  { host: 'APRIL', tanggal: '2026-07-18', jamMulai: '15.00', sesi: 'SESI 2', gmv: 367000, target: '0 - 2JT', timestamp: '21/07/2026 21:50:02' },
-  { host: 'APRIL', tanggal: '2026-07-19', jamMulai: '05.00', sesi: 'SESI 1', gmv: 153000, target: '0 - 2JT', timestamp: '21/07/2026 21:50:49' },
-  { host: 'APRIL', tanggal: '2026-07-19', jamMulai: '09.00', sesi: 'SESI 2', gmv: 198000, target: '0 - 2JT', timestamp: '21/07/2026 21:51:26' },
-  { host: 'APRIL', tanggal: '2026-07-20', jamMulai: '05.00', sesi: 'SESI 1', gmv: 101000, target: '0 - 2JT', timestamp: '21/07/2026 21:51:56' },
-  { host: 'APRIL', tanggal: '2026-07-20', jamMulai: '11.00', sesi: 'SESI 2', gmv: 476000, target: '0 - 2JT', timestamp: '21/07/2026 21:52:28' },
-  { host: 'APRIL', tanggal: '2026-07-21', jamMulai: '05.00', sesi: 'SESI 1', gmv: 411000, target: '0 - 2JT', timestamp: '21/07/2026 21:52:51' },
-  { host: 'APRIL', tanggal: '2026-07-21', jamMulai: '11.00', sesi: 'SESI 2', gmv: 52000, target: '0 - 2JT', timestamp: '21/07/2026 21:53:15' },
-  { host: 'AUFA', tanggal: '2026-07-20', jamMulai: '17.00', sesi: 'SESI 2', gmv: 542000, target: '0 - 2JT', timestamp: '22/07/2026 13:05:07' },
-  { host: 'AUFA', tanggal: '2026-07-21', jamMulai: '09.00', sesi: 'SESI 1', gmv: 503000, target: '0 - 2JT', timestamp: '22/07/2026 13:05:39' },
-  { host: 'AUFA', tanggal: '2026-07-21', jamMulai: '17.00', sesi: 'SESI 2', gmv: 402000, target: '0 - 2JT', timestamp: '22/07/2026 13:06:08' },
-  { host: 'AUFA', tanggal: '2026-07-22', jamMulai: '05.00', sesi: 'SESI 1', gmv: 260000, target: '0 - 2JT', timestamp: '22/07/2026 13:06:36' },
-  { host: 'ALIN', tanggal: '2026-07-21', jamMulai: '07.00', sesi: 'SESI 1', gmv: 532000, target: '0 - 2JT', timestamp: '22/07/2026 14:29:47' },
-  { host: 'ALIN', tanggal: '2026-07-21', jamMulai: '13.00', sesi: 'SESI 2', gmv: 157000, target: '0 - 2JT', timestamp: '22/07/2026 14:30:12' },
-  { host: 'ALIN', tanggal: '2026-07-22', jamMulai: '07.00', sesi: 'SESI 1', gmv: 613000, target: '0 - 2JT', timestamp: '22/07/2026 14:30:33' },
-  { host: 'ALIN', tanggal: '2026-07-22', jamMulai: '13.00', sesi: 'SESI 2', gmv: 535000, target: '0 - 2JT', timestamp: '22/07/2026 15:05:57' },
-];
-
 function parseTargetRange(t) {
   const nums = (t.match(/\d+/g) || []).map(Number);
   if (nums.length < 2) return [0, 0];
@@ -264,6 +134,32 @@ async function saveShared(key, value) {
   }
 }
 
+// --- Laporan sekarang disimpan sebagai baris sungguhan di tabel "laporan" ---
+// (bukan lagi gumpalan JSON di kv_store), supaya submit/hapus dari HP lain
+// tidak saling menimpa dan anti-dobel dijamin langsung oleh database.
+async function loadEntries() {
+  try {
+    const { data, error } = await supabase
+      .from("laporan")
+      .select("*")
+      .order("tanggal", { ascending: false })
+      .order("jam_mulai", { ascending: false });
+    if (error || !data) return [];
+    return data.map((row) => ({
+      id: row.id,
+      host: row.host,
+      tanggal: row.tanggal,
+      jamMulai: row.jam_mulai,
+      sesi: row.sesi,
+      gmv: row.gmv,
+      target: row.target,
+      timestamp: row.timestamp,
+    }));
+  } catch {
+    return [];
+  }
+}
+
 export default function App() {
   const [tab, setTab] = useState("input");
   const [hosts, setHosts] = useState(DEFAULT_HOSTS);
@@ -277,7 +173,6 @@ export default function App() {
   const [pinInput, setPinInput] = useState("");
   const [pinError, setPinError] = useState(false);
   const [newPin, setNewPin] = useState("");
-  const [importMsg, setImportMsg] = useState("");
   const [excelMsg, setExcelMsg] = useState("");
   const fileInputRef = useRef(null);
   const [expandedHosts, setExpandedHosts] = useState({});
@@ -294,7 +189,7 @@ export default function App() {
     (async () => {
       const [h, e, pin] = await Promise.all([
         loadShared("live-hosts", DEFAULT_HOSTS),
-        loadShared("live-entries", []),
+        loadEntries(),
         loadShared("live-admin-pin", "1234"),
       ]);
       setHosts(h);
@@ -303,6 +198,18 @@ export default function App() {
       setLoading(false);
     })();
   }, []);
+
+  // Auto-refresh tiap 30 detik, biar laporan/rekap/grafik ikut update
+  // walau ada host lain yang input dari HP lain tanpa perlu refresh manual
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      const fresh = await loadEntries();
+      setEntries(fresh);
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const [submitError, setSubmitError] = useState("");
 
   const isDuplicate = useMemo(() => {
     if (!form.host || !form.tanggal || !form.sesi) return false;
@@ -313,10 +220,26 @@ export default function App() {
 
   async function submitEntry() {
     if (!canSubmit) return;
-    const entry = { id: Date.now().toString(), ...form, gmv: Number(form.gmv), timestamp: nowTimestamp() };
-    const next = [entry, ...entries];
-    setEntries(next);
-    await saveShared("live-entries", next);
+    setSubmitError("");
+    const { error } = await supabase.from("laporan").insert({
+      host: form.host,
+      tanggal: form.tanggal,
+      jam_mulai: form.jamMulai,
+      sesi: form.sesi,
+      gmv: Number(form.gmv),
+      target: form.target,
+      timestamp: nowTimestamp(),
+    });
+    if (error) {
+      if (error.code === "23505") {
+        setSubmitError("Laporan ini sudah pernah diinput (mungkin baru saja oleh orang lain). Coba refresh dulu.");
+      } else {
+        setSubmitError("Gagal menyimpan, coba lagi.");
+      }
+      return;
+    }
+    const fresh = await loadEntries();
+    setEntries(fresh);
     setForm({ host: "", tanggal: "", jamMulai: "", sesi: "", gmv: "", target: "" });
     setJustSaved(true);
     setTimeout(() => setJustSaved(false), 2000);
@@ -324,9 +247,11 @@ export default function App() {
 
   async function deleteEntry(id) {
     if (!isAdmin) return;
-    const next = entries.filter((e) => e.id !== id);
-    setEntries(next);
-    await saveShared("live-entries", next);
+    const { error } = await supabase.from("laporan").delete().eq("id", id);
+    if (!error) {
+      const fresh = await loadEntries();
+      setEntries(fresh);
+    }
   }
 
   async function addHost() {
@@ -362,22 +287,6 @@ export default function App() {
     setNewPin("");
   }
 
-  async function importJuli2026() {
-    const existingKeys = new Set(entries.map((e) => `${e.host}|${e.tanggal}|${e.sesi}`));
-    const toAdd = IMPORT_DATA_JULI_2026.filter((r) => !existingKeys.has(`${r.host}|${r.tanggal}|${r.sesi}`)).map((r, i) => ({
-      id: `import-${r.host}-${r.tanggal}-${r.sesi}-${i}`.replace(/\s/g, ""),
-      ...r,
-    }));
-    if (toAdd.length === 0) {
-      setImportMsg("Semua data sudah pernah diimpor, tidak ada yang ditambahkan.");
-      return;
-    }
-    const next = [...entries, ...toAdd];
-    setEntries(next);
-    await saveShared("live-entries", next);
-    setImportMsg(`${toAdd.length} laporan berhasil diimpor (${IMPORT_DATA_JULI_2026.length - toAdd.length} dilewati karena sudah ada).`);
-  }
-
   async function handleExcelFile(fileEvent) {
     const file = fileEvent.target.files?.[0];
     fileEvent.target.value = "";
@@ -403,18 +312,21 @@ export default function App() {
         setHosts(newHosts);
         await saveShared("live-hosts", newHosts);
       }
-      const existingKeys = new Set(entries.map((e) => `${e.host}|${e.tanggal}|${e.sesi}`));
-      const toAdd = parsed
-        .filter((p) => !existingKeys.has(`${p.host}|${p.tanggal}|${p.sesi}`))
-        .map((p, i) => ({ id: `xls-${Date.now()}-${i}`, ...p }));
-      if (toAdd.length === 0) {
-        setExcelMsg("Semua baris di file ini sudah pernah ada, tidak ada yang ditambahkan.");
+      const rows = parsed.map((p) => ({
+        host: p.host, tanggal: p.tanggal, jam_mulai: p.jamMulai, sesi: p.sesi, gmv: p.gmv, target: p.target, timestamp: p.timestamp,
+      }));
+      const { data, error } = await supabase
+        .from("laporan")
+        .upsert(rows, { onConflict: "host,tanggal,sesi", ignoreDuplicates: true })
+        .select();
+      if (error) {
+        setExcelMsg("Gagal mengimpor: " + error.message);
         return;
       }
-      const next = [...entries, ...toAdd];
-      setEntries(next);
-      await saveShared("live-entries", next);
-      setExcelMsg(`${toAdd.length} laporan berhasil diimpor dari Excel (${parsed.length - toAdd.length} dilewati karena duplikat).`);
+      const berhasil = data ? data.length : 0;
+      const fresh = await loadEntries();
+      setEntries(fresh);
+      setExcelMsg(`${berhasil} laporan berhasil diimpor dari Excel (${parsed.length - berhasil} dilewati karena duplikat).`);
     } catch (err) {
       console.error(err);
       setExcelMsg("Gagal membaca file. Pastikan formatnya .xlsx atau .xls.");
@@ -427,6 +339,16 @@ export default function App() {
   }, [entries]);
   const [monthFilter, setMonthFilter] = useState("");
   useEffect(() => { if (months.length && !monthFilter) setMonthFilter(months[0]); }, [months]);
+
+  const [remindStart, setRemindStart] = useState("");
+  const [remindEnd, setRemindEnd] = useState("");
+  useEffect(() => {
+    const today = new Date();
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    const toISO = (d) => d.toISOString().slice(0, 10);
+    setRemindStart(toISO(firstDay));
+    setRemindEnd(toISO(today));
+  }, []);
 
   const filtered = useMemo(
     () => entries.filter((e) => !monthFilter || e.tanggal?.startsWith(monthFilter)),
@@ -486,27 +408,53 @@ export default function App() {
     return map;
   }, [filtered, hosts]);
 
+  const missingReport = useMemo(() => {
+    if (!remindStart || !remindEnd) return {};
+    const result = {};
+    hosts.forEach((h) => { result[h] = {}; });
+    const start = new Date(remindStart);
+    const end = new Date(remindEnd);
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      const iso = d.toISOString().slice(0, 10);
+      hosts.forEach((h) => {
+        const daySesi = entries.filter((e) => e.host === h && e.tanggal === iso).map((e) => e.sesi);
+        const missing = ["SESI 1", "SESI 2"].filter((s) => !daySesi.includes(s));
+        if (missing.length > 0) result[h][iso] = missing;
+      });
+    }
+    return result;
+  }, [remindStart, remindEnd, entries, hosts]);
+
+  function generateReminderText() {
+    const lines = [`Reminder Laporan Live (${formatTanggalDMY(remindStart)} - ${formatTanggalDMY(remindEnd)})`, ""];
+    hosts.forEach((h) => {
+      const missingDates = Object.keys(missingReport[h] || {}).sort();
+      if (missingDates.length === 0) {
+        lines.push(`${h} — lengkap ✅`);
+      } else {
+        lines.push(h);
+        missingDates.forEach((iso) => {
+          const [, m, dd] = iso.split("-");
+          lines.push(`${dd}/${m} — ${missingReport[h][iso].join(", ")} belum input`);
+        });
+      }
+      lines.push("");
+    });
+    lines.push("Mohon segera dilengkapi ya 🙏");
+    return lines.join("\n");
+  }
+
+  function kirimReminderWA() {
+    const text = generateReminderText();
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+  }
+
   const grandTotal = filtered.reduce((s, e) => s + e.gmv, 0);
   const grandGajiPokok = filtered.length * BASE_UPAH;
   const grandBonus = filtered.reduce((s, e) => s + hitungBonus(e.gmv), 0);
   const grandTotalGaji = grandGajiPokok + grandBonus;
 
   function exportExcel() {
-    const detailRows = filtered.map((e) => {
-      return {
-        Timestamp: e.timestamp || "",
-        "NAMA HOST": e.host,
-        TANGGAL: formatTanggalDMY(e.tanggal),
-        "JAM MULAI": e.jamMulai,
-        SESI: e.sesi,
-        "LAPORAN PEROLEHAN GMV TIKTOK": e.gmv,
-        TARGET: e.target,
-        STATUS: e.gmv >= 2_000_000 ? "Tercapai" : "Belum",
-        GAJI: BASE_UPAH,
-        BONUS: hitungBonus(e.gmv),
-        "TOTAL GAJI": hitungTotalGaji(e.gmv),
-      };
-    });
     const summaryRows = perHost.map((p) => ({
       Host: p.host,
       "Total GMV": p.total,
@@ -518,7 +466,25 @@ export default function App() {
     }));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summaryRows), "Rekap Host");
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(detailRows), "Detail Laporan");
+
+    hosts.forEach((host) => {
+      const rows = filtered
+        .filter((e) => e.host === host)
+        .sort((a, b) => (a.tanggal + a.jamMulai).localeCompare(b.tanggal + b.jamMulai))
+        .map((e) => ({
+          TANGGAL: formatTanggalDMY(e.tanggal),
+          "JAM MULAI": e.jamMulai,
+          SESI: e.sesi,
+          "LAPORAN PEROLEHAN GMV TIKTOK": e.gmv,
+          TARGET: e.target,
+          GAJI: BASE_UPAH,
+          BONUS: hitungBonus(e.gmv),
+          "TOTAL GAJI": hitungTotalGaji(e.gmv),
+        }));
+      if (rows.length === 0) return;
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), host.slice(0, 31));
+    });
+
     XLSX.writeFile(wb, `laporan-live-${monthFilter || "semua"}.xlsx`);
   }
 
@@ -619,6 +585,11 @@ export default function App() {
               ⚠️ Laporan {form.host} tanggal {formatTanggalDMY(form.tanggal)} {form.sesi} sudah pernah diinput.
             </div>
           )}
+          {submitError && (
+            <div style={{ marginTop: 10, textAlign: "center", color: BAD, fontSize: 13, fontWeight: 600 }}>
+              ⚠️ {submitError}
+            </div>
+          )}
           {justSaved && <div style={{ marginTop: 10, textAlign: "center", color: GOOD, fontSize: 13, fontWeight: 600 }}>✨ Laporan tersimpan!</div>}
         </div>
       ) : (
@@ -641,6 +612,48 @@ export default function App() {
               </button>
             )}
           </div>
+
+          {isAdmin && (
+            <div style={{ ...cardStyle, marginTop: 16 }}>
+              <h3 style={{ fontFamily: "Fredoka, sans-serif", fontSize: 16, margin: "0 0 10px" }}>🔔 Cek Kelengkapan Laporan</h3>
+              <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                <div style={{ flex: 1 }}>
+                  <label style={labelStyle}>DARI</label>
+                  <input type="date" value={remindStart} onChange={(e) => setRemindStart(e.target.value)} style={selectStyle} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={labelStyle}>SAMPAI</label>
+                  <input type="date" value={remindEnd} onChange={(e) => setRemindEnd(e.target.value)} style={selectStyle} />
+                </div>
+              </div>
+              <div style={{ fontSize: 13, lineHeight: 1.7, marginBottom: 12 }}>
+                {hosts.map((h) => {
+                  const missingDates = Object.keys(missingReport[h] || {}).sort();
+                  return (
+                    <div key={h} style={{ marginBottom: 8 }}>
+                      <div style={{ fontWeight: 600 }}>{h}</div>
+                      {missingDates.length === 0 ? (
+                        <div style={{ color: GOOD, fontSize: 12 }}>Lengkap ✅</div>
+                      ) : (
+                        missingDates.map((iso) => {
+                          const [, m, dd] = iso.split("-");
+                          return (
+                            <div key={iso} style={{ color: BAD, fontSize: 12 }}>
+                              {dd}/{m} — {missingReport[h][iso].join(", ")} belum input
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <button onClick={kirimReminderWA}
+                style={{ width: "100%", padding: "12px 0", borderRadius: 10, border: "none", background: "#25D366", color: "#0a0a0f", fontWeight: 700, cursor: "pointer" }}>
+                Kirim ke WhatsApp
+              </button>
+            </div>
+          )}
 
           <div style={{ display: "flex", gap: 10, margin: "16px 0" }}>
             <div style={cardStyle}>
@@ -806,15 +819,6 @@ export default function App() {
                   Simpan
                 </button>
               </div>
-            </div>
-
-            <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid #24242f" }}>
-              <label style={labelStyle}>IMPORT DATA LAMA</label>
-              <button onClick={importJuli2026}
-                style={{ width: "100%", padding: "12px 0", borderRadius: 10, border: "none", background: `linear-gradient(135deg, ${ACCENT}, ${CYAN})`, color: "#0a0a0f", fontWeight: 700, cursor: "pointer" }}>
-                Import Data Juli 2026 ({IMPORT_DATA_JULI_2026.length} baris)
-              </button>
-              {importMsg && <div style={{ marginTop: 8, fontSize: 12, color: "#8a8a9a" }}>{importMsg}</div>}
             </div>
 
             <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid #24242f" }}>
