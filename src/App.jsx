@@ -16,9 +16,11 @@ const DEFAULT_HOSTS = ["ALIN","APRIL","AUFA","HILDA"];
 
 const ACCENT = "#FE2C55";
 const CYAN = "#25F4EE";
-const GOOD = "#25F4EE";
+const GOOD = "#5EEAD4";
 const BAD = "#FFB800";
-const HOST_COLORS = ["#25F4EE", "#FE2C55", "#FFB800", "#8B5CF6", "#4ADE80", "#FF7A5C", "#60A5FA"];
+const GMV_COLOR = "#7DD3FC";
+const BONUS_COLOR = "#FCD34D";
+const HOST_COLORS = ["#5EEAD4", "#F472B6", "#FCD34D", "#A78BFA", "#4ADE80", "#FB923C", "#7DD3FC"];
 const BASE_UPAH = 25000;
 const BONUS_PER_JT = 5000;
 
@@ -658,7 +660,7 @@ export default function App() {
           <div style={{ display: "flex", gap: 10, margin: "16px 0" }}>
             <div style={cardStyle}>
               <div style={{ fontSize: 12, color: "#8a8a9a" }}>TOTAL GMV</div>
-              <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 18, fontWeight: 700, color: ACCENT }}>{formatRupiah(grandTotal)}</div>
+              <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 18, fontWeight: 700, color: GMV_COLOR }}>{formatRupiah(grandTotal)}</div>
             </div>
             <div style={cardStyle}>
               <div style={{ fontSize: 12, color: "#8a8a9a" }}>TOTAL SESI</div>
@@ -673,7 +675,7 @@ export default function App() {
               </div>
               <div style={cardStyle}>
                 <div style={{ fontSize: 12, color: "#8a8a9a" }}>BONUS</div>
-                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 16, fontWeight: 700, color: ACCENT }}>{formatRupiah(grandBonus)}</div>
+                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 16, fontWeight: 700, color: BONUS_COLOR }}>{formatRupiah(grandBonus)}</div>
               </div>
               <div style={cardStyle}>
                 <div style={{ fontSize: 12, color: "#8a8a9a" }}>TOTAL GAJI</div>
@@ -689,7 +691,7 @@ export default function App() {
                 <XAxis dataKey="host" tick={{ fill: "#8a8a9a", fontSize: 11 }} />
                 <YAxis tick={{ fill: "#8a8a9a", fontSize: 10 }} tickFormatter={(v) => `${v / 1e6}jt`} />
                 <Tooltip formatter={(v) => formatRupiah(v)} contentStyle={{ background: "#20202b", border: "none", borderRadius: 8 }} />
-                <Bar dataKey="total" fill={CYAN} radius={[6, 6, 0, 0]} />
+                <Bar dataKey="total" fill={GMV_COLOR} radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -726,7 +728,7 @@ export default function App() {
                 )}
               </div>
               <div style={{ textAlign: "right" }}>
-                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: ACCENT }}>{formatRupiah(p.total)}</div>
+                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: GMV_COLOR }}>{formatRupiah(p.total)}</div>
                 {isAdmin && (
                   <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: GOOD }}>Total: {formatRupiah(p.totalGaji)}</div>
                 )}
@@ -765,7 +767,7 @@ export default function App() {
                           </div>
                           <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
                             <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>{formatRupiah(e.gmv)}</span>
-                            <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: tercapai ? "rgba(37,244,238,0.15)" : "rgba(255,184,0,0.15)", color: tercapai ? GOOD : BAD, fontWeight: 600 }}>
+                            <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: tercapai ? "rgba(94,234,212,0.15)" : "rgba(255,184,0,0.15)", color: tercapai ? GOOD : BAD, fontWeight: 600 }}>
                               {tercapai ? "🎉 Tercapai" : "Belum"}
                             </span>
                           </div>
