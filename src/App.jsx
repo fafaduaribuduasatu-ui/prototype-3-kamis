@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { Plus, Radio, Settings2, X, Trash2, Lock, Unlock, ChevronDown, ChevronRight, Crown } from "lucide-react";
-import { BarChart, Bar, LineChart, Line, Legend, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from "recharts";
 import { FileDown } from "lucide-react";
 import * as XLSX from "xlsx";
 import { supabase } from "./supabaseClient";
@@ -20,7 +20,6 @@ const GOOD = "#5EEAD4";
 const BAD = "#FFB800";
 const GMV_COLOR = "#7DD3FC";
 const BONUS_COLOR = "#FCD34D";
-const HOST_COLORS = ["#5EEAD4", "#F472B6", "#FCD34D", "#A78BFA", "#4ADE80", "#FB923C", "#7DD3FC"];
 const BASE_UPAH = 25000;
 const BONUS_PER_JT = 5000;
 
@@ -51,6 +50,14 @@ function formatTanggalDMY(iso) {
   if (!iso) return "";
   const [y, m, d] = iso.split("-");
   return `${d}/${m}/${y}`;
+}
+
+function sesiTampilan(info) {
+  if (!info) return <span style={{ color: "#555" }}>—</span>;
+  if (info.status === "off") return <span style={{ color: "#FCD34D" }}>Off</span>;
+  if (info.status === "zonk") return <span style={{ color: "#FFB800" }}>Zonk</span>;
+  if (info.status === "kosong") return <span style={{ color: "#555" }}>—</span>;
+  return <span>{formatRupiah(info.amount)}</span>;
 }
 
 function excelSerialToISO(serial) {
@@ -139,13 +146,14 @@ async function saveShared(key, value) {
 // --- Laporan sekarang disimpan sebagai baris sungguhan di tabel "laporan" ---
 // (bukan lagi gumpalan JSON di kv_store), supaya submit/hapus dari HP lain
 // tidak saling menimpa dan anti-dobel dijamin langsung oleh database.
-async function loadEntries() {
+// loadEntriesInRange dipakai baik untuk data 1 bulan (Rekap/grafik/kalender)
+// maupun rentang bebas (kartu Cek Kelengkapan Laporan).
+async function loadEntriesInRange(startDate, endDate) {
   try {
-    const { data, error } = await supabase
-      .from("laporan")
-      .select("*")
-      .order("tanggal", { ascending: false })
-      .order("jam_mulai", { ascending: false });
+    let query = supabase.from("laporan").select("*").order("tanggal", { ascending: false }).order("jam_mulai", { ascending: false }).limit(5000);
+    if (startDate) query = query.gte("tanggal", startDate);
+    if (endDate) query = query.lte("tanggal", endDate);
+    const { data, error } = await query;
     if (error || !data) return [];
     return data.map((row) => ({
       id: row.id,
@@ -162,11 +170,40 @@ async function loadEntries() {
   }
 }
 
+function monthRange(month) {
+  if (!month) return [null, null];
+  const [y, m] = month.split("-").map(Number);
+  const lastDay = new Date(y, m, 0).getDate();
+  return [`${month}-01`, `${month}-${String(lastDay).padStart(2, "0")}`];
+}
+
+async function loadAvailableMonths() {
+  try {
+    const { data, error } = await supabase.rpc("get_available_months");
+    if (error || !data) return [];
+    return data.map((r) => r.month);
+  } catch {
+    return [];
+  }
+}
+
+async function loadOffDays() {
+  try {
+    const { data, error } = await supabase.from("hari_off").select("*").order("tanggal", { ascending: false });
+    if (error || !data) return [];
+    return data;
+  } catch {
+    return [];
+  }
+}
+
 export default function App() {
   const [tab, setTab] = useState("input");
   const [hosts, setHosts] = useState(DEFAULT_HOSTS);
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [months, setMonths] = useState([]);
+  const [monthFilter, setMonthFilter] = useState("");
   const [showHostSettings, setShowHostSettings] = useState(false);
   const [newHostName, setNewHostName] = useState("");
   const [adminPin, setAdminPin] = useState("1234");
@@ -178,6 +215,8 @@ export default function App() {
   const [excelMsg, setExcelMsg] = useState("");
   const fileInputRef = useRef(null);
   const [expandedHosts, setExpandedHosts] = useState({});
+  const [selectedDay, setSelectedDay] = useState(null);
+  const [showDailyTable, setShowDailyTable] = useState(false);
   function toggleHostExpand(host) {
     setExpandedHosts((prev) => ({ ...prev, [host]: !prev[host] }));
   }
@@ -186,30 +225,96 @@ export default function App() {
     host: "", tanggal: "", jamMulai: "", sesi: "", gmv: "", target: "",
   });
   const [justSaved, setJustSaved] = useState(false);
+  const [offDays, setOffDays] = useState([]);
+  const [offHost, setOffHost] = useState("");
+  const [offTanggal, setOffTanggal] = useState("");
+  const [offSesi1, setOffSesi1] = useState(false);
+  const [offSesi2, setOffSesi2] = useState(false);
+  const [offAlasan, setOffAlasan] = useState("");
+  const [offMsg, setOffMsg] = useState("");
+
+  async function addOffDay() {
+    if (!offHost || !offTanggal || (!offSesi1 && !offSesi2)) {
+      setOffMsg("Pilih host, tanggal, dan minimal 1 sesi dulu.");
+      return;
+    }
+    const rows = [];
+    if (offSesi1) rows.push({ host: offHost, tanggal: offTanggal, sesi: "SESI 1", alasan: offAlasan || null });
+    if (offSesi2) rows.push({ host: offHost, tanggal: offTanggal, sesi: "SESI 2", alasan: offAlasan || null });
+    const { error } = await supabase.from("hari_off").upsert(rows, { onConflict: "host,tanggal,sesi" });
+    if (error) {
+      setOffMsg("Gagal menyimpan: " + error.message);
+      return;
+    }
+    const fresh = await loadOffDays();
+    setOffDays(fresh);
+    setOffHost("");
+    setOffTanggal("");
+    setOffSesi1(false);
+    setOffSesi2(false);
+    setOffAlasan("");
+    setOffMsg("Berhasil ditandai off.");
+  }
+
+  async function deleteOffDay(id) {
+    const { error } = await supabase.from("hari_off").delete().eq("id", id);
+    if (!error) {
+      const fresh = await loadOffDays();
+      setOffDays(fresh);
+    }
+  }
 
   useEffect(() => {
     (async () => {
-      const [h, e, pin] = await Promise.all([
+      const [h, pin, off, monthsList] = await Promise.all([
         loadShared("live-hosts", DEFAULT_HOSTS),
-        loadEntries(),
         loadShared("live-admin-pin", "1234"),
+        loadOffDays(),
+        loadAvailableMonths(),
       ]);
       setHosts(h);
-      setEntries(e);
       setAdminPin(pin);
+      setOffDays(off);
+      setMonths(monthsList);
+      if (monthsList.length > 0) {
+        setMonthFilter(monthsList[0]);
+      } else {
+        const now = new Date();
+        setMonthFilter(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`);
+      }
       setLoading(false);
     })();
   }, []);
 
-  // Auto-refresh tiap 30 detik, biar laporan/rekap/grafik ikut update
-  // walau ada host lain yang input dari HP lain tanpa perlu refresh manual
+  // Tiap ganti bulan yang dipilih, ambil ulang data laporan KHUSUS bulan itu
+  // (bukan ambil semua data sekaligus) - lebih ringan walau datanya sudah ribuan baris.
+  const [monthLoading, setMonthLoading] = useState(false);
   useEffect(() => {
+    setSelectedDay(null);
+  }, [monthFilter]);
+
+  useEffect(() => {
+    if (!monthFilter) return;
+    (async () => {
+      setMonthLoading(true);
+      const [start, end] = monthRange(monthFilter);
+      const fresh = await loadEntriesInRange(start, end);
+      setEntries(fresh);
+      setMonthLoading(false);
+    })();
+  }, [monthFilter]);
+
+  // Auto-refresh tiap 30 detik untuk bulan yang lagi aktif, biar rekap/grafik
+  // ikut update walau ada host lain yang input dari HP lain tanpa perlu refresh manual
+  useEffect(() => {
+    if (!monthFilter) return;
     const interval = setInterval(async () => {
-      const fresh = await loadEntries();
+      const [start, end] = monthRange(monthFilter);
+      const fresh = await loadEntriesInRange(start, end);
       setEntries(fresh);
     }, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [monthFilter]);
 
   const [submitError, setSubmitError] = useState("");
 
@@ -219,6 +324,18 @@ export default function App() {
   }, [form.host, form.tanggal, form.sesi, entries]);
 
   const canSubmit = form.host && form.tanggal && form.jamMulai && form.sesi && form.gmv && form.target && !isDuplicate;
+
+  async function refreshCurrentMonth() {
+    const [start, end] = monthRange(monthFilter);
+    const fresh = await loadEntriesInRange(start, end);
+    setEntries(fresh);
+    const monthsList = await loadAvailableMonths();
+    setMonths(monthsList);
+    if (remindStart && remindEnd) {
+      const freshReminder = await loadEntriesInRange(remindStart, remindEnd);
+      setReminderEntries(freshReminder);
+    }
+  }
 
   async function submitEntry() {
     if (!canSubmit) return;
@@ -240,8 +357,7 @@ export default function App() {
       }
       return;
     }
-    const fresh = await loadEntries();
-    setEntries(fresh);
+    await refreshCurrentMonth();
     setForm({ host: "", tanggal: "", jamMulai: "", sesi: "", gmv: "", target: "" });
     setJustSaved(true);
     setTimeout(() => setJustSaved(false), 2000);
@@ -251,8 +367,7 @@ export default function App() {
     if (!isAdmin) return;
     const { error } = await supabase.from("laporan").delete().eq("id", id);
     if (!error) {
-      const fresh = await loadEntries();
-      setEntries(fresh);
+      await refreshCurrentMonth();
     }
   }
 
@@ -326,21 +441,13 @@ export default function App() {
         return;
       }
       const berhasil = data ? data.length : 0;
-      const fresh = await loadEntries();
-      setEntries(fresh);
+      await refreshCurrentMonth();
       setExcelMsg(`${berhasil} laporan berhasil diimpor dari Excel (${parsed.length - berhasil} dilewati karena duplikat).`);
     } catch (err) {
       console.error(err);
       setExcelMsg("Gagal membaca file. Pastikan formatnya .xlsx atau .xls.");
     }
   }
-
-  const months = useMemo(() => {
-    const set = new Set(entries.map((e) => e.tanggal?.slice(0, 7)).filter(Boolean));
-    return Array.from(set).sort().reverse();
-  }, [entries]);
-  const [monthFilter, setMonthFilter] = useState("");
-  useEffect(() => { if (months.length && !monthFilter) setMonthFilter(months[0]); }, [months]);
 
   const [remindStart, setRemindStart] = useState("");
   const [remindEnd, setRemindEnd] = useState("");
@@ -352,10 +459,9 @@ export default function App() {
     setRemindEnd(toISO(today));
   }, []);
 
-  const filtered = useMemo(
-    () => entries.filter((e) => !monthFilter || e.tanggal?.startsWith(monthFilter)),
-    [entries, monthFilter]
-  );
+  // Data laporan sudah scoped per bulan terpilih sejak diambil dari server,
+  // jadi tidak perlu difilter ulang di sini.
+  const filtered = entries;
 
   const perHost = useMemo(() => {
     const map = {};
@@ -377,38 +483,80 @@ export default function App() {
 
   const topPerformer = perHost.length > 0 && perHost[0].total > 0 ? perHost[0].host : null;
 
-  const dailyChartData = useMemo(() => {
+  function sesiInfoFor(host, dateStr, sesiName) {
+    const isOff = offDays.some((o) => o.host === host && o.tanggal === dateStr && o.sesi === sesiName);
+    if (isOff) return { status: "off" };
+    const entry = filtered.find((e) => e.host === host && e.tanggal === dateStr && e.sesi === sesiName);
+    if (!entry) return { status: "kosong" };
+    if (!entry.gmv || entry.gmv === 0) return { status: "zonk", amount: 0 };
+    return { status: "ok", amount: entry.gmv };
+  }
+
+  const calendarData = useMemo(() => {
     if (!monthFilter) return [];
     const [y, m] = monthFilter.split("-").map(Number);
     if (!y || !m) return [];
     const daysInMonth = new Date(y, m, 0).getDate();
     const arr = [];
     for (let d = 1; d <= daysInMonth; d++) {
-      const row = { day: d };
-      hosts.forEach((h) => { row[h] = 0; });
-      arr.push(row);
+      const dateStr = `${monthFilter}-${String(d).padStart(2, "0")}`;
+      const perHostDetail = {};
+      let total = 0;
+      hosts.forEach((h) => {
+        const s1 = sesiInfoFor(h, dateStr, "SESI 1");
+        const s2 = sesiInfoFor(h, dateStr, "SESI 2");
+        if (s1.status === "ok") total += s1.amount;
+        if (s2.status === "ok") total += s2.amount;
+        perHostDetail[h] = { s1, s2 };
+      });
+      arr.push({ day: d, tanggal: dateStr, total, perHostDetail });
     }
-    filtered.forEach((e) => {
-      const day = parseInt((e.tanggal || "").slice(8, 10), 10);
-      if (day >= 1 && day <= daysInMonth) {
-        arr[day - 1][e.host] = (arr[day - 1][e.host] || 0) + e.gmv;
-      }
-    });
     return arr;
-  }, [filtered, monthFilter, hosts]);
+  }, [filtered, offDays, monthFilter, hosts]);
+
+  const maxDayTotal = Math.max(1, ...calendarData.map((d) => d.total));
+  const leadingBlanks = monthFilter ? new Date(Number(monthFilter.slice(0, 4)), Number(monthFilter.slice(5, 7)) - 1, 1).getDay() : 0;
+
+  const filteredOffDays = useMemo(
+    () => offDays.filter((o) => !monthFilter || o.tanggal?.startsWith(monthFilter)),
+    [offDays, monthFilter]
+  );
 
   const detailByHost = useMemo(() => {
     const map = {};
     hosts.forEach((h) => (map[h] = []));
     filtered.forEach((e) => {
       if (!map[e.host]) map[e.host] = [];
-      map[e.host].push(e);
+      map[e.host].push({ type: "laporan", ...e });
+    });
+    // Gabungkan catatan off per host+tanggal (1 baris off bisa gabung Sesi 1 & Sesi 2)
+    const offGrouped = {};
+    filteredOffDays.forEach((o) => {
+      const key = `${o.host}|${o.tanggal}`;
+      if (!offGrouped[key]) offGrouped[key] = { type: "off", host: o.host, tanggal: o.tanggal, sesi: [], alasan: o.alasan };
+      offGrouped[key].sesi.push(o.sesi);
+    });
+    Object.values(offGrouped).forEach((o) => {
+      if (!map[o.host]) map[o.host] = [];
+      map[o.host].push(o);
     });
     Object.keys(map).forEach((h) => {
-      map[h].sort((a, b) => (b.tanggal + b.jamMulai).localeCompare(a.tanggal + a.jamMulai));
+      map[h].sort((a, b) => (b.tanggal + (b.jamMulai || "")).localeCompare(a.tanggal + (a.jamMulai || "")));
     });
     return map;
-  }, [filtered, hosts]);
+  }, [filtered, filteredOffDays, hosts]);
+
+  const [reminderEntries, setReminderEntries] = useState([]);
+  const [reminderLoading, setReminderLoading] = useState(false);
+  useEffect(() => {
+    if (!remindStart || !remindEnd) return;
+    (async () => {
+      setReminderLoading(true);
+      const fresh = await loadEntriesInRange(remindStart, remindEnd);
+      setReminderEntries(fresh);
+      setReminderLoading(false);
+    })();
+  }, [remindStart, remindEnd]);
 
   const missingReport = useMemo(() => {
     if (!remindStart || !remindEnd) return {};
@@ -419,25 +567,31 @@ export default function App() {
     for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
       const iso = d.toISOString().slice(0, 10);
       hosts.forEach((h) => {
-        const daySesi = entries.filter((e) => e.host === h && e.tanggal === iso).map((e) => e.sesi);
-        const missing = ["SESI 1", "SESI 2"].filter((s) => !daySesi.includes(s));
-        if (missing.length > 0) result[h][iso] = missing;
+        const daySesi = reminderEntries.filter((e) => e.host === h && e.tanggal === iso).map((e) => e.sesi);
+        const offSesi = offDays.filter((o) => o.host === h && o.tanggal === iso).map((o) => o.sesi);
+        const missing = ["SESI 1", "SESI 2"].filter((s) => !daySesi.includes(s) && !offSesi.includes(s));
+        const off = ["SESI 1", "SESI 2"].filter((s) => offSesi.includes(s));
+        if (missing.length > 0 || off.length > 0) result[h][iso] = { missing, off };
       });
     }
     return result;
-  }, [remindStart, remindEnd, entries, hosts]);
+  }, [remindStart, remindEnd, reminderEntries, hosts, offDays]);
 
   function generateReminderText() {
     const lines = [`Reminder Laporan Live (${formatTanggalDMY(remindStart)} - ${formatTanggalDMY(remindEnd)})`, ""];
     hosts.forEach((h) => {
-      const missingDates = Object.keys(missingReport[h] || {}).sort();
-      if (missingDates.length === 0) {
+      const dates = Object.keys(missingReport[h] || {}).sort();
+      if (dates.length === 0) {
         lines.push(`${h} — lengkap ✅`);
       } else {
         lines.push(h);
-        missingDates.forEach((iso) => {
+        dates.forEach((iso) => {
           const [, m, dd] = iso.split("-");
-          lines.push(`${dd}/${m} — ${missingReport[h][iso].join(", ")} belum input`);
+          const { missing, off } = missingReport[h][iso];
+          const parts = [];
+          if (missing.length > 0) parts.push(`${missing.join(", ")} belum input`);
+          if (off.length > 0) parts.push(`${off.join(", ")} Off (izin)`);
+          lines.push(`${dd}/${m} — ${parts.join(", ")}`);
         });
       }
       lines.push("");
@@ -598,7 +752,8 @@ export default function App() {
         <div style={{ padding: 20, maxWidth: 640, margin: "0 auto" }}>
           <div style={{ display: "flex", gap: 8 }}>
             <select value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)} style={{ ...selectStyle, maxWidth: 220 }}>
-              {months.length === 0 && <option value="">Belum ada data</option>}
+              {months.length === 0 && !monthFilter && <option value="">Belum ada data</option>}
+              {monthFilter && !months.includes(monthFilter) && <option value={monthFilter}>{monthFilter}</option>}
               {months.map((m) => <option key={m} value={m}>{m}</option>)}
             </select>
             {isAdmin && (
@@ -614,6 +769,7 @@ export default function App() {
               </button>
             )}
           </div>
+          {monthLoading && <div style={{ fontSize: 12, color: "#8a8a9a", marginTop: 8 }}>Memuat data bulan ini…</div>}
 
           {isAdmin && (
             <div style={{ ...cardStyle, marginTop: 16 }}>
@@ -630,18 +786,22 @@ export default function App() {
               </div>
               <div style={{ fontSize: 13, lineHeight: 1.7, marginBottom: 12 }}>
                 {hosts.map((h) => {
-                  const missingDates = Object.keys(missingReport[h] || {}).sort();
+                  const dates = Object.keys(missingReport[h] || {}).sort();
                   return (
                     <div key={h} style={{ marginBottom: 8 }}>
                       <div style={{ fontWeight: 600 }}>{h}</div>
-                      {missingDates.length === 0 ? (
+                      {dates.length === 0 ? (
                         <div style={{ color: GOOD, fontSize: 12 }}>Lengkap ✅</div>
                       ) : (
-                        missingDates.map((iso) => {
+                        dates.map((iso) => {
                           const [, m, dd] = iso.split("-");
+                          const { missing, off } = missingReport[h][iso];
+                          const parts = [];
+                          if (missing.length > 0) parts.push(`${missing.join(", ")} belum input`);
+                          if (off.length > 0) parts.push(`${off.join(", ")} Off (izin)`);
                           return (
-                            <div key={iso} style={{ color: BAD, fontSize: 12 }}>
-                              {dd}/{m} — {missingReport[h][iso].join(", ")} belum input
+                            <div key={iso} style={{ color: missing.length > 0 ? BAD : GOOD, fontSize: 12 }}>
+                              {dd}/{m} — {parts.join(" · ")}
                             </div>
                           );
                         })
@@ -654,8 +814,46 @@ export default function App() {
                 style={{ width: "100%", padding: "12px 0", borderRadius: 10, border: "none", background: "#25D366", color: "#0a0a0f", fontWeight: 700, cursor: "pointer" }}>
                 Kirim ke WhatsApp
               </button>
+
+              <div style={{ borderTop: "1px solid #24242f", marginTop: 16, paddingTop: 14 }}>
+                <label style={labelStyle}>TANDAI OFF / IZIN</label>
+                <select value={offHost} onChange={(e) => setOffHost(e.target.value)} style={selectStyle}>
+                  <option value="">Pilih host</option>
+                  {hosts.map((h) => <option key={h} value={h}>{h}</option>)}
+                </select>
+                <input type="date" value={offTanggal} onChange={(e) => setOffTanggal(e.target.value)} style={{ ...selectStyle, marginTop: 8 }} />
+                <div style={{ display: "flex", gap: 16, margin: "10px 0" }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
+                    <input type="checkbox" checked={offSesi1} onChange={(e) => setOffSesi1(e.target.checked)} /> Sesi 1
+                  </label>
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
+                    <input type="checkbox" checked={offSesi2} onChange={(e) => setOffSesi2(e.target.checked)} /> Sesi 2
+                  </label>
+                </div>
+                <input value={offAlasan} onChange={(e) => setOffAlasan(e.target.value)} placeholder="Alasan (opsional)" style={selectStyle} />
+                <button onClick={addOffDay}
+                  style={{ width: "100%", marginTop: 10, padding: "10px 0", borderRadius: 10, border: "none", background: GOOD, color: "#0a0a0f", fontWeight: 700, cursor: "pointer" }}>
+                  Simpan Off
+                </button>
+                {offMsg && <div style={{ marginTop: 8, fontSize: 12, color: "#8a8a9a" }}>{offMsg}</div>}
+
+                {offDays.length > 0 && (
+                  <div style={{ marginTop: 14 }}>
+                    <div style={{ fontSize: 11, color: "#8a8a9a", marginBottom: 6, letterSpacing: 1 }}>DAFTAR OFF TERCATAT</div>
+                    {offDays.map((o) => (
+                      <div key={o.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, padding: "6px 0", borderBottom: "1px solid #24242f" }}>
+                        <span>{o.host} — {formatTanggalDMY(o.tanggal)} — {o.sesi}{o.alasan ? ` (${o.alasan})` : ""}</span>
+                        <button onClick={() => deleteOffDay(o.id)} style={{ background: "none", border: "none", color: "#8a8a9a", cursor: "pointer" }}>
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
+
 
           <div style={{ display: "flex", gap: 10, margin: "16px 0" }}>
             <div style={cardStyle}>
@@ -696,20 +894,87 @@ export default function App() {
             </ResponsiveContainer>
           </div>
 
-          <h3 style={{ fontFamily: "Fredoka, sans-serif", fontSize: 16, marginBottom: 10, color: "#8a8a9a" }}>Tren GMV Harian</h3>
-          <div style={{ height: 220, marginBottom: 20 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={dailyChartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#2a2a36" />
-                <XAxis dataKey="day" tick={{ fill: "#8a8a9a", fontSize: 10 }} />
-                <YAxis tick={{ fill: "#8a8a9a", fontSize: 10 }} tickFormatter={(v) => `${v / 1e6}jt`} />
-                <Tooltip formatter={(v) => formatRupiah(v)} labelFormatter={(d) => `Tanggal ${d}`} contentStyle={{ background: "#20202b", border: "none", borderRadius: 8 }} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                {hosts.map((h, i) => (
-                  <Line key={h} type="monotone" dataKey={h} stroke={HOST_COLORS[i % HOST_COLORS.length]} strokeWidth={2} dot={false} />
-                ))}
-              </LineChart>
-            </ResponsiveContainer>
+          <h3 style={{ fontFamily: "Fredoka, sans-serif", fontSize: 16, marginBottom: 10, color: "#8a8a9a" }}>Kalender GMV Harian</h3>
+          <div style={{ ...cardStyle, marginBottom: 20 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4, marginBottom: 6 }}>
+              {["M", "S", "S", "R", "K", "J", "S"].map((d, i) => (
+                <div key={i} style={{ textAlign: "center", fontSize: 11, color: "#8a8a9a" }}>{d}</div>
+              ))}
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 }}>
+              {Array.from({ length: leadingBlanks }).map((_, i) => <div key={`blank-${i}`} />)}
+              {calendarData.map((info) => {
+                const intensity = info.total / maxDayTotal;
+                const isSelected = selectedDay?.day === info.day;
+                return (
+                  <button key={info.day} onClick={() => setSelectedDay(info)}
+                    style={{
+                      aspectRatio: "1", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer",
+                      background: info.total > 0 ? `rgba(94,234,212,${0.12 + intensity * 0.6})` : "#16161f",
+                      color: intensity > 0.55 ? "#0a0a0f" : "#F5F1E8",
+                      border: isSelected ? `2px solid ${ACCENT}` : "1px solid #24242f",
+                    }}>
+                    {info.day}
+                  </button>
+                );
+              })}
+            </div>
+
+            {selectedDay && (
+              <div style={{ marginTop: 14, borderTop: "1px solid #24242f", paddingTop: 12 }}>
+                <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 8 }}>
+                  Tanggal {formatTanggalDMY(selectedDay.tanggal)} — Total {formatRupiah(selectedDay.total)}
+                </div>
+                {hosts.map((h) => {
+                  const d = selectedDay.perHostDetail[h];
+                  return (
+                    <div key={h} style={{ padding: "6px 0", borderTop: "1px solid #24242f" }}>
+                      <div style={{ fontSize: 12, fontWeight: 600 }}>{h}</div>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#8a8a9a", marginTop: 2 }}>
+                        <span>Sesi 1: {sesiTampilan(d.s1)}</span>
+                        <span>Sesi 2: {sesiTampilan(d.s2)}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <button onClick={() => setShowDailyTable((v) => !v)}
+              style={{ width: "100%", marginTop: 14, padding: "10px 0", borderRadius: 10, border: "1px solid #24242f", background: "#16161f", color: "#F5F1E8", fontWeight: 600, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", paddingLeft: 14, paddingRight: 14 }}>
+              <span>Lihat tabel per tanggal</span>
+              {showDailyTable ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+            </button>
+
+            {showDailyTable && (
+              <div style={{ marginTop: 10, overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, tableLayout: "fixed" }}>
+                  <thead>
+                    <tr style={{ borderBottom: "1px solid #24242f" }}>
+                      <th style={{ textAlign: "left", padding: "6px 4px", color: "#8a8a9a", fontWeight: 600, width: 34 }}>Tgl</th>
+                      <th style={{ textAlign: "left", padding: "6px 4px", color: "#8a8a9a", fontWeight: 600 }}>Host</th>
+                      <th style={{ textAlign: "right", padding: "6px 4px", color: "#8a8a9a", fontWeight: 600 }}>Sesi 1</th>
+                      <th style={{ textAlign: "right", padding: "6px 4px", color: "#8a8a9a", fontWeight: 600 }}>Sesi 2</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {calendarData.map((info) =>
+                      hosts.map((h, hi) => {
+                        const d = info.perHostDetail[h];
+                        return (
+                          <tr key={`${info.day}-${h}`} style={{ borderBottom: "1px solid #24242f" }}>
+                            <td style={{ padding: "5px 4px" }}>{hi === 0 ? info.day : ""}</td>
+                            <td style={{ padding: "5px 4px" }}>{h}</td>
+                            <td style={{ textAlign: "right", padding: "5px 4px" }}>{sesiTampilan(d.s1)}</td>
+                            <td style={{ textAlign: "right", padding: "5px 4px" }}>{sesiTampilan(d.s2)}</td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
           <h3 style={{ fontFamily: "Fredoka, sans-serif", fontSize: 18, marginBottom: 10 }}>Rekap per Host</h3>
@@ -740,6 +1005,8 @@ export default function App() {
           {filtered.length === 0 && <div style={{ opacity: 0.5, fontSize: 14 }}>Belum ada laporan bulan ini.</div>}
           {hosts.filter((h) => (detailByHost[h] || []).length > 0).map((host) => {
             const hostEntries = detailByHost[host] || [];
+            const jumlahLaporan = hostEntries.filter((e) => e.type === "laporan").length;
+            const jumlahOff = hostEntries.filter((e) => e.type === "off").length;
             const isOpen = !!expandedHosts[host];
             return (
               <div key={host} style={{ ...cardStyle, marginBottom: 8, padding: 0, overflow: "hidden" }}>
@@ -749,11 +1016,23 @@ export default function App() {
                     {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                     {host}
                   </span>
-                  <span style={{ fontSize: 12, color: "#8a8a9a" }}>{hostEntries.length} laporan</span>
+                  <span style={{ fontSize: 12, color: "#8a8a9a" }}>{jumlahLaporan} laporan{jumlahOff > 0 ? ` · ${jumlahOff} off` : ""}</span>
                 </button>
                 {isOpen && (
                   <div style={{ padding: "0 14px 14px" }}>
-                    {hostEntries.map((e) => {
+                    {hostEntries.map((e, idx) => {
+                      if (e.type === "off") {
+                        return (
+                          <div key={`off-${e.tanggal}-${idx}`} style={{ borderTop: "1px solid #24242f", paddingTop: 10, marginTop: 10 }}>
+                            <div style={{ fontSize: 13, color: "#8a8a9a" }}>{formatTanggalDMY(e.tanggal)}</div>
+                            <div style={{ marginTop: 6 }}>
+                              <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: "rgba(255,184,0,0.15)", color: BAD, fontWeight: 600 }}>
+                                📌 {e.sesi.join(", ")} Off{e.alasan ? ` (${e.alasan})` : ""}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      }
                       const tercapai = e.gmv >= 2_000_000;
                       return (
                         <div key={e.id} style={{ borderTop: "1px solid #24242f", paddingTop: 10, marginTop: 10 }}>
