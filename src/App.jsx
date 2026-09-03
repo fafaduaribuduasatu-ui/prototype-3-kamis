@@ -836,20 +836,6 @@ export default function App() {
                   Simpan Off
                 </button>
                 {offMsg && <div style={{ marginTop: 8, fontSize: 12, color: "#8a8a9a" }}>{offMsg}</div>}
-
-                {offDays.length > 0 && (
-                  <div style={{ marginTop: 14 }}>
-                    <div style={{ fontSize: 11, color: "#8a8a9a", marginBottom: 6, letterSpacing: 1 }}>DAFTAR OFF TERCATAT</div>
-                    {offDays.map((o) => (
-                      <div key={o.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, padding: "6px 0", borderBottom: "1px solid #24242f" }}>
-                        <span>{o.host} — {formatTanggalDMY(o.tanggal)} — {o.sesi}{o.alasan ? ` (${o.alasan})` : ""}</span>
-                        <button onClick={() => deleteOffDay(o.id)} style={{ background: "none", border: "none", color: "#8a8a9a", cursor: "pointer" }}>
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
             </div>
           )}
@@ -1063,6 +1049,20 @@ export default function App() {
               </div>
             );
           })}
+
+          {isAdmin && filteredOffDays.length > 0 && (
+            <div style={{ ...cardStyle, marginTop: 20 }}>
+              <h3 style={{ fontFamily: "Fredoka, sans-serif", fontSize: 16, margin: "0 0 10px" }}>📌 Daftar Off Tercatat ({monthFilter})</h3>
+              {filteredOffDays.map((o) => (
+                <div key={o.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, padding: "6px 0", borderBottom: "1px solid #24242f" }}>
+                  <span>{o.host} — {formatTanggalDMY(o.tanggal)} — {o.sesi}{o.alasan ? ` (${o.alasan})` : ""}</span>
+                  <button onClick={() => deleteOffDay(o.id)} style={{ background: "none", border: "none", color: "#8a8a9a", cursor: "pointer" }}>
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
