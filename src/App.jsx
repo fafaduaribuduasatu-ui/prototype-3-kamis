@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { Plus, Radio, Settings2, X, Trash2, Lock, Unlock, ChevronDown, ChevronRight, Crown } from "lucide-react";
+import { Plus, Radio, Settings2, X, Trash2, Lock, Unlock, ChevronDown, ChevronRight } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from "recharts";
 import { FileDown } from "lucide-react";
 import * as XLSX from "xlsx";
@@ -480,8 +480,6 @@ export default function App() {
       .map((p) => ({ ...p, hariKerja: p.hariSet.size }))
       .sort((a, b) => b.total - a.total);
   }, [filtered, hosts]);
-
-  const topPerformer = perHost.length > 0 && perHost[0].total > 0 ? perHost[0].host : null;
 
   function sesiInfoFor(host, dateStr, sesiName) {
     const isOff = offDays.some((o) => o.host === host && o.tanggal === dateStr && o.sesi === sesiName);
@@ -964,28 +962,72 @@ export default function App() {
           </div>
 
           <h3 style={{ fontFamily: "Fredoka, sans-serif", fontSize: 18, marginBottom: 10 }}>Rekap per Host</h3>
-          {perHost.map((p) => (
-            <div key={p.host} style={{ ...cardStyle, display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-              <div>
-                <div style={{ fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
-                  {p.host}
-                  {topPerformer === p.host && <Crown size={14} color={BAD} />}
-                </div>
-                <div style={{ fontSize: 12, color: "#8a8a9a" }}>{p.hariKerja} hari kerja · {p.sesi} sesi · {p.tercapai} tercapai target</div>
-                {isAdmin && (
-                  <div style={{ fontSize: 11, color: "#8a8a9a", marginTop: 2 }}>
-                    Gaji {formatRupiah(p.gajiPokok)} + Bonus {formatRupiah(p.bonus)}
+          {(() => {
+            const hasRanking = perHost.some((x) => x.total > 0);
+            return perHost.map((p, idx) => {
+              const rank = idx + 1;
+              const above = idx > 0 ? perHost[idx - 1] : null;
+              const gap = above ? above.total - p.total : 0;
+
+              if (hasRanking && rank === 1) {
+                return (
+                  <div key={p.host} style={{ padding: 1, borderRadius: 16, background: "linear-gradient(135deg, #FCD34D, #FE2C55 50%, #FCD34D)", marginBottom: 10, boxShadow: "0 0 28px rgba(252,211,77,0.18)" }}>
+                    <div style={{ background: "#141118", borderRadius: 15, padding: 16, position: "relative", overflow: "hidden" }}>
+                      <div style={{ position: "absolute", top: -40, right: -40, width: 120, height: 120, background: "radial-gradient(circle, rgba(252,211,77,0.25), transparent 70%)" }} />
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, position: "relative" }}>
+                        <span style={{ fontSize: 13 }}>👑</span>
+                        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, background: "linear-gradient(90deg,#FCD34D,#FE2C55)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>TOP PERFORMER</span>
+                      </div>
+                      <div style={{ fontFamily: "Fredoka, sans-serif", fontWeight: 600, fontSize: 19, marginTop: 6, position: "relative" }}>{p.host}</div>
+                      <div style={{ fontSize: 12, color: "#a8a8b5", marginTop: 3, position: "relative" }}>{p.hariKerja} hari kerja · {p.sesi} sesi · {p.tercapai} tercapai target</div>
+                      {isAdmin && (
+                        <div style={{ fontSize: 11, color: "#a8a8b5", marginTop: 4, position: "relative" }}>
+                          Gaji {formatRupiah(p.gajiPokok)} + Bonus {formatRupiah(p.bonus)}
+                        </div>
+                      )}
+                      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: 20, marginTop: 10, position: "relative", background: "linear-gradient(90deg,#FCD34D,#FFF7D6)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                        {formatRupiah(p.total)}
+                      </div>
+                      {isAdmin && (
+                        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: GOOD, marginTop: 2, position: "relative" }}>Total Gaji: {formatRupiah(p.totalGaji)}</div>
+                      )}
+                    </div>
                   </div>
-                )}
-              </div>
-              <div style={{ textAlign: "right" }}>
-                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: GMV_COLOR }}>{formatRupiah(p.total)}</div>
-                {isAdmin && (
-                  <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: GOOD }}>Total: {formatRupiah(p.totalGaji)}</div>
-                )}
-              </div>
-            </div>
-          ))}
+                );
+              }
+
+              const medal = rank === 2 ? "🥈" : rank === 3 ? "🥉" : null;
+              const isCloseGap = above && gap > 0 && gap < 100000;
+              let gapText = null;
+              if (hasRanking && above && gap > 0) {
+                gapText = rank <= 3
+                  ? (isCloseGap
+                      ? <span style={{ color: ACCENT, fontWeight: 600 }}>🔥 Cuma {formatRupiah(gap)} lagi buat lewatin {above.host}!</span>
+                      : <span style={{ color: BONUS_COLOR }}>{formatRupiah(gap)} lagi buat lewatin {above.host}</span>)
+                  : <span style={{ color: BONUS_COLOR }}>💪 {formatRupiah(gap)} lagi buat lewatin {above.host}</span>;
+              }
+
+              return (
+                <div key={p.host} style={{ ...cardStyle, marginBottom: 8, position: "relative" }}>
+                  <div style={{ position: "absolute", top: 14, right: 14, fontSize: medal ? 20 : 13, color: "#8a8a9a", fontWeight: 600 }}>
+                    {medal || (hasRanking ? `#${rank}` : "")}
+                  </div>
+                  <div style={{ fontWeight: 600, fontSize: 15 }}>{p.host}</div>
+                  <div style={{ fontSize: 12, color: "#8a8a9a", marginTop: 2 }}>{p.hariKerja} hari kerja · {p.sesi} sesi · {p.tercapai} tercapai target</div>
+                  {gapText && <div style={{ fontSize: 12, marginTop: 6 }}>{gapText}</div>}
+                  {isAdmin && (
+                    <div style={{ fontSize: 11, color: "#8a8a9a", marginTop: 4 }}>
+                      Gaji {formatRupiah(p.gajiPokok)} + Bonus {formatRupiah(p.bonus)}
+                    </div>
+                  )}
+                  <div style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: 18, color: GMV_COLOR, marginTop: 8 }}>{formatRupiah(p.total)}</div>
+                  {isAdmin && (
+                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: GOOD, marginTop: 2 }}>Total Gaji: {formatRupiah(p.totalGaji)}</div>
+                  )}
+                </div>
+              );
+            });
+          })()}
 
           <h3 style={{ fontFamily: "Fredoka, sans-serif", fontSize: 18, margin: "20px 0 10px" }}>Detail Laporan</h3>
           {filtered.length === 0 && <div style={{ opacity: 0.5, fontSize: 14 }}>Belum ada laporan bulan ini.</div>}
